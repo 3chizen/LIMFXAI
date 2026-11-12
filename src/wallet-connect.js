@@ -49,6 +49,8 @@ window.LIMFXAIWallet = {
       throw new Error('Reown wallet provider unavailable');
     }
 
+    caipNetworkId = typeof caipNetworkId === 'number' ? 'eip155:' + caipNetworkId : caipNetworkId;
+
     const connectorId =
       ['WALLET_CONNECT', 'WALLETCONNECT'].includes(appKit.getWalletProviderType())
         ? 'walletConnect'
