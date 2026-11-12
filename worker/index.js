@@ -95,13 +95,32 @@ const RPC_CHAIN = {
   base: { env: "RPC_BASE", chainId: 8453, native: "ETH" },
   arbitrum: { env: "RPC_ARBITRUM", chainId: 42161, native: "ETH" }
 };
-async function rpcCall(endpoint, method, params=[]) {
-  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})});
-  if(!response.ok)throw new Error(`RPC HTTP ${response.status}`);
-  const payload=await response.json();
-  if(payload.error)throw new Error(payload.error.message||"RPC call failed");
-  return payload.result;
+async function rpcCall(endpoint,method,params=[]) {
+  let lastError;
+  for(let attempt=0;attempt<3;attempt++){
+    try {
+      const response=await fetch(endpoint,{
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({jsonrpc:"2.0",id:1,method,params})
+      });
+      if((response.status===429||response.status>=500)&&attempt<2){
+        const retryAfter=Number(response.headers.get("retry-after")||0);
+        const delay=retryAfter>0?Math.min(retryAfter*1000,3000):300*(2**attempt);
+        await new Promise(resolve=>setTimeout(resolve,delay));
+        continue;
+      }
+      if(!response.ok)throw new Error(`RPC HTTP ${response.status}`);
+      const payload=await response.json();
+      if(payload.error)throw new Error(payload.error.message||"RPC call failed");
+      return payload.result;
+    } catch(e) {
+      lastError=e;
+      if(attempt===2||! /429|fetch failed|network/i.test(e.message))throw e;
+      await new Promise(resolve=>setTimeout(resolve,300*(2**attempt)));
+    }
+  }
+  throw lastError||new Error("RPC request failed");
 }
 function hexToBigInt(value) {
   if(typeof value!=="string"||!/^0x[0-9a-fA-F]+$/.test(value))throw new Error("Invalid hex quantity from RPC");
