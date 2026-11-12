@@ -18,6 +18,11 @@ let authWalletSource='injected';
 let reownCaipNetworkId=null, reownChainId=null;
 let reownUnsubAccount=null, reownUnsubNetwork=null;
 
+function setWalletUi(connected){
+ $('connectWallet').textContent=connected?'Disconnect wallet':'Connect wallet';
+ const row=[...document.querySelectorAll('.status-row')].find(el=>el.firstElementChild?.textContent.trim()==='Wallet');
+ if(row){const status=row.querySelector('b');if(status)status.textContent=connected?'Connected':'Not connected';}
+}
 function syncReownVerify(){
  const connected=!!$('authWallet').value.trim();
  const supported=Object.values(evmIds).includes(Number(reownChainId));
@@ -29,6 +34,22 @@ const toBase64UrlBytes = bytes => {
   return btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
 };
 $('connectWallet').onclick=async()=>{
+ if(authWalletSource==='reown' && window.LIMFXAIWallet?.getAddress()){
+  try{
+   await window.LIMFXAIWallet.disconnect();
+   authSession=null;pendingChallenge=null;
+   $('authWallet').value='';
+   $('verifyWallet').disabled=true;
+   reownCaipNetworkId=null;reownChainId=null;
+   setWalletUi(false);
+   $('authStatus').textContent='Wallet disconnected.';
+   return;
+  }catch(e){
+   $('authStatus').textContent='Disconnect error: '+e.message;
+   return;
+  }
+ }
+
  const chain=$('authChain').value;
  try{
   if(chain==='solana'){
@@ -75,10 +96,13 @@ $('connectWallet').onclick=async()=>{
      if(state.isConnected&&state.address){
       authWalletSource='reown';
       $('authWallet').value=state.address;
+      setWalletUi(true);
       $('authStatus').textContent='Wallet connected. Periksa jaringan, lalu verifikasi signature.';
      }else{
+      authSession=null;pendingChallenge=null;
       $('authWallet').value='';
       $('verifyWallet').disabled=true;
+      setWalletUi(false);
       $('authStatus').textContent='Wallet belum terhubung.';
      }
      syncReownVerify();
@@ -89,6 +113,7 @@ $('connectWallet').onclick=async()=>{
    return;
   }
 
+  setWalletUi(true);
   $('verifyWallet').disabled=false;
   $('authStatus').textContent='Wallet connected. Next: request a one-time sign-in challenge and sign the displayed message.';
  }catch(e){

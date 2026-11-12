@@ -28,6 +28,7 @@ const appKit = createAppKit({
 
 window.LIMFXAIWallet = {
   open: () => appKit.open(),
+  disconnect: () => appKit.disconnect(),
 
   getAddress: () => appKit.getAddress(),
   getChainId: () => appKit.getChainId(),
