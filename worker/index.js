@@ -16,9 +16,9 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 });
 const err = (message, status=400) => json({ error: message }, status);
 const uid = () => crypto.randomUUID();
-const b64u = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/=/g,"").replace(/\\+/g,"-").replace(/\\//g,"_");
+const b64u = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
 const decodeB64u = (s) => Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
-const encodeB64uBytes = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/=/g,"").replace(/\\+/g,"-").replace(/\\//g,"_");
+const encodeB64uBytes = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
 const fromB64u = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0)));
 async function hmacKey(secret) {
   return crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
