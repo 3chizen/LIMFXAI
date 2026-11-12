@@ -54,15 +54,26 @@ window.LIMFXAIWallet = {
         ? 'walletConnect'
         : undefined;
 
-    const result = await wagmiAdapter.signMessage({
-      message,
-      address,
-      provider,
-      caipNetworkId,
-      connectorId
-    });
-
-    return result.signature;
+    try {
+      const result = await wagmiAdapter.signMessage({
+        message,
+        address,
+        provider,
+        caipNetworkId,
+        connectorId
+      });
+      return result.signature;
+    } catch (error) {
+      throw new Error("LIMFXAI diagnostic: " + JSON.stringify({
+        providerType: appKit.getWalletProviderType(),
+        connectorId,
+        caipNetworkId,
+        chainId: appKit.getChainId(),
+        errorName: error?.name,
+        errorMessage: error?.message,
+        cause: error?.cause?.message
+      }));
+    }
   }
 };
 
