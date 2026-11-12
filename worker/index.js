@@ -512,6 +512,25 @@ export default {
 };
 
 // FEATURE 01 — ON-CHAIN FORENSICS
+async function alchemyTopHolders(chain,address,env) {
+  const apiKey=env.ALCHEMY_API_KEY;
+  if(!apiKey)return {status:"not_configured",provider:"alchemy",topHolders:[]};
+  const networks={ethereum:"eth-mainnet",base:"base-mainnet",arbitrum:"arb-mainnet",bnb:"bnb-mainnet"};
+  const network=networks[chain];
+  if(!network)return {status:"unsupported_chain",provider:"alchemy_trading_api",topHolders:[]};
+  try {
+    const url=`https://api.g.alchemy.com/trading/v1/${encodeURIComponent(apiKey)}/tokens/${network}/${address}/holders?pageSize=25`;
+    const response=await fetch(url,{headers:{accept:"application/json"}});
+    if(!response.ok)return {status:"unavailable",provider:"alchemy_trading_api",httpStatus:response.status,topHolders:[]};
+    const body=await response.json();
+    const rows=Array.isArray(body.data)?body.data:[];
+    const topHolders=rows.slice(0,25).filter(item=>item&&typeof item.address==="string").map(item=>({address:item.address,amount:item.amount==null?null:String(item.amount),valueUsd:item.valueUsd==null?null:String(item.valueUsd)}));
+    return {status:"available",provider:"alchemy_trading_api",network,pageSize:25,hasMore:!!body.pageKey,topHolders};
+  } catch(e) {
+    return {status:"error",provider:"alchemy_trading_api",topHolders:[]};
+  }
+}
+
 async function tokenForensics(chain,address,env) {
   if(!CHAINS[chain])throw new Error("Unsupported chain");
   if(typeof address!=="string")throw new Error("Token address is required");
@@ -606,6 +625,7 @@ async function tokenForensics(chain,address,env) {
   if(ownerRaw&&/^0x0{24}[a-fA-F0-9]{40}$/.test(ownerRaw))findings.push("Contract exposes an owner() response; privileged functions require source-level review.");
   if(pausedRaw==="0x"+"0".repeat(63)+"1")findings.push("paused() currently reports true.");
 
+  const holderAnalysis=await alchemyTopHolders(chain,address,env);
   return {
     ok:true,chain,address,analysis:"rpc_static_screening",
     contractAudit:{
@@ -620,7 +640,7 @@ async function tokenForensics(chain,address,env) {
       sourceVerification:"not_checked",
       formalAudit:"not_performed"
     },
-    holderAnalysis:{status:"requires_external_indexer"},
+    holderAnalysis,
     walletIntelligence:{status:"pending_indexer",bots:"unverified",scamLabels:"unverified",kolAttribution:"unverified",bubbleMap:"pending_transfer_graph"},
     warnings:["RPC screening is not a source-code audit.","Selector responses do not prove the absence or presence of vulnerabilities.","No CertiK certification is implied."]
   };
