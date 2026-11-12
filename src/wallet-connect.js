@@ -50,7 +50,7 @@ window.LIMFXAIWallet = {
     }
 
     const connectorId =
-      appKit.getWalletProviderType() === 'WALLET_CONNECT'
+      ['WALLET_CONNECT', 'WALLETCONNECT'].includes(appKit.getWalletProviderType())
         ? 'walletConnect'
         : undefined;
 
