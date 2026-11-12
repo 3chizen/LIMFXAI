@@ -537,8 +537,10 @@ async function goldrushTopHolders(chain,address,env) {
   try {
     const url=`https://api.covalenthq.com/v1/${network}/tokens/${address}/token_holders_v2/?page-size=100&page-number=0`;
     const response=await fetch(url,{headers:{accept:"application/json",authorization:`Bearer ${apiKey}`}});
-    const body=await response.json();
-    if(!response.ok||body.error||!body.data)return {status:"unavailable",provider:"goldrush",httpStatus:response.status,error:body.error_message||body.error||null,topHolders:[]};
+    const raw=await response.text();
+    let body={};
+    try { body=JSON.parse(raw); } catch {}
+    if(!response.ok||body.error||!body.data)return {status:"unavailable",provider:"goldrush",httpStatus:response.status,error:String(body.error_message||body.error||body.message||raw||"No error details").slice(0,500),topHolders:[]};
     const rows=Array.isArray(body.data.items)?body.data.items:[];
     const topHolders=rows.filter(item=>item&&typeof item.address==="string").map(item=>({address:item.address,amount:item.balance==null?null:String(item.balance),valueUsd:null}));
     const pagination=body.data.pagination||{};
