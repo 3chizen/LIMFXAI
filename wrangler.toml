@@ -14,7 +14,7 @@ database_id = "d270b313-37b3-4503-9182-2950a696f831"
 [vars]
 OPENAI_MODEL = "gpt-4.1-mini"
 XAI_MODEL = "grok-3-mini"
-RPC_ETHEREUM = "https://ethereum-rpc.publicnode.com"
+RPC_ETHEREUM = "https://1rpc.io/eth"
 RPC_BNB = "https://bsc-rpc.publicnode.com"
 RPC_BASE = "https://base-rpc.publicnode.com"
 RPC_ARBITRUM = "https://arbitrum-one-rpc.publicnode.com"
