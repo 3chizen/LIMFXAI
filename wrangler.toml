@@ -9,7 +9,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "limfxai-db"
-database_id = "d11f2903dc68fe6185bf1d995d299236"
+database_id = "d270b313-37b3-4503-9182-2950a696f831"
 
 [vars]
 OPENAI_MODEL = "gpt-4.1-mini"
