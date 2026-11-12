@@ -250,3 +250,13 @@ button:active{
 .intel-raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font-size:10px}
 @media(min-width:700px){.intel-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.intel-title{font-size:30px}}
 @media(max-width:380px){.intel-metric b{font-size:15px}.intel-hero{padding:15px}}
+
+/* ON-CHAIN FORENSICS — Feature 01 */
+.forensics-panel{margin-top:18px;padding:22px}
+.forensics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.forensics-grid .intel-section{min-width:0;padding:16px;border:1px solid rgba(145,125,255,.2);border-radius:14px;background:rgba(15,17,36,.58)}
+.forensics-grid .intel-section h3{font-size:12px;letter-spacing:.08em;color:#a99cff;margin:0 0 12px}
+.forensics-grid .intel-empty{min-height:54px;padding:12px;border-radius:9px;background:rgba(255,255,255,.025);font-size:12px;line-height:1.65}
+.forensics-grid .forensics-wide{grid-column:1/-1}
+.forensics-panel .intel-disclaimer{margin-top:18px;padding:12px;border-left:2px solid #8b7cff;background:rgba(139,124,255,.07);font-size:11px;line-height:1.6;color:#aaa8c3}
+@media(max-width:600px){.forensics-panel{padding:15px}.forensics-grid{grid-template-columns:1fr;gap:10px}.forensics-grid .forensics-wide{grid-column:auto}}

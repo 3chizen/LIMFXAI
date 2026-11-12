@@ -447,7 +447,8 @@ export default {
    if(url.pathname==="/api/quote"&&request.method==="POST")return getDexQuote(request,env,await request.json());
    if(url.pathname==="/api/security/inspect-evm"&&request.method==="POST")return inspectEvmTransaction(request,env,await request.json());
    if(url.pathname==="/api/security/spender-intel"&&request.method==="POST")return spenderIntel(request,env,await request.json());
-   if(url.pathname==="/api/research/token"&&request.method==="GET"){
+   if(url.pathname==="/api/forensics/token"&&request.method==="GET"){try{return json(await tokenForensics(url.searchParams.get("chain"),url.searchParams.get("address"),env));}catch(e){return err(e.message,502);}}
+    if(url.pathname==="/api/research/token"&&request.method==="GET"){
     try{return json(await tokenResearch(url.searchParams.get("chain"),url.searchParams.get("address")));}catch(e){return err(e.message,502);}
    }
    if(url.pathname==="/api/chat"&&request.method==="POST"){
@@ -490,3 +491,119 @@ export default {
   }catch(e){return err(e.message||"Internal error",500);}
  }
 };
+
+// FEATURE 01 — ON-CHAIN FORENSICS
+async function tokenForensics(chain,address,env) {
+  if(!CHAINS[chain])throw new Error("Unsupported chain");
+  if(typeof address!=="string")throw new Error("Token address is required");
+
+  if(chain==="solana") {
+    if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address))throw new Error("Invalid Solana mint address");
+    if(!env.RPC_SOLANA)throw new Error("RPC_SOLANA is not configured");
+
+    const [supplyResult,largestResult]=await Promise.all([
+      rpcCall(env.RPC_SOLANA,"getTokenSupply",[address,{commitment:"confirmed"}]),
+      rpcCall(env.RPC_SOLANA,"getTokenLargestAccounts",[address,{commitment:"confirmed"}])
+    ]);
+
+    const supply=supplyResult?.value;
+    if(!supply)throw new Error("Token supply unavailable");
+
+    const total=BigInt(supply.amount||"0");
+    const accounts=largestResult?.value||[];
+
+    const holders=await Promise.all(accounts.slice(0,20).map(async item=>{
+      try {
+        const info=await rpcCall(env.RPC_SOLANA,"getAccountInfo",[
+          item.address,{encoding:"jsonParsed",commitment:"confirmed"}
+        ]);
+        const parsed=info?.value?.data?.parsed?.info;
+        const amount=BigInt(item.amount||"0");
+        return {
+          tokenAccount:item.address,
+          owner:parsed?.owner||null,
+          amount:item.uiAmountString||"0",
+          percentage:total>0n?Number(amount*1000000n/total)/10000:0,
+          ownerStatus:parsed?.owner?"identified":"unavailable"
+        };
+      } catch {
+        return {tokenAccount:item.address,amount:item.uiAmountString||"0",owner:null,ownerStatus:"unavailable"};
+      }
+    }));
+
+    const grouped=new Map();
+    for(const h of holders) {
+      const key=h.owner||h.tokenAccount;
+      const old=grouped.get(key);
+      if(old) {
+        old.amount=String(Number(old.amount)+Number(h.amount));
+        old.percentage+=h.percentage;
+        old.tokenAccounts++;
+      } else {
+        grouped.set(key,{...h,tokenAccounts:1});
+      }
+    }
+
+    return {
+      ok:true,chain,address,analysis:"partial_rpc_snapshot",
+      contractAudit:{status:"not_applicable",note:"Solana programs require program-specific analysis."},
+      supply:{amount:supply.uiAmountString,decimals:supply.decimals},
+      topHolders:[...grouped.values()].sort((a,b)=>b.percentage-a.percentage),
+      coverage:{tokenAccountsInspected:accounts.length,limit:20,complete:false},
+      walletIntelligence:{status:"pending_indexer",bots:"unverified",scamLabels:"unverified",kolAttribution:"unverified",bubbleMap:"pending_transfer_graph"},
+      warnings:["Largest token accounts are not a complete holder list.","Some token accounts may not expose owner data.","No wallet is labeled malicious without verified evidence."]
+    };
+  }
+
+  const cfg=RPC_CHAIN[chain];
+  if(!cfg)throw new Error("Forensics RPC is not available for this chain");
+  if(!/^0x[a-fA-F0-9]{40}$/.test(address))throw new Error("Invalid EVM contract address");
+  const rpc=env[cfg.env];
+  if(!rpc)throw new Error(`${cfg.env} is not configured`);
+
+  const code=await rpcCall(rpc,"eth_getCode",[address,"latest"]);
+  if(!code||code==="0x") {
+    return {ok:true,chain,address,contractAudit:{status:"no_contract_code",risk:"not_applicable",findings:["No deployed contract bytecode found. This may be an EOA wallet or an undeployed address; this alone is not evidence of a scam."]},holderAnalysis:{status:"unsupported_without_indexer"}};
+  }
+
+  async function call(selector) {
+    try{return await rpcCall(rpc,"eth_call",[{to:address,data:selector},"latest"]);}
+    catch{return null;}
+  }
+
+  const [supplyRaw,decimalsRaw,ownerRaw,pausedRaw,proxyRaw]=await Promise.all([
+    call("0x18160ddd"),
+    call("0x313ce567"),
+    call("0x8da5cb5b"),
+    call("0x5c975abb"),
+    rpcCall(rpc,"eth_getStorageAt",[address,"0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc","latest"]).catch(()=>null)
+  ]);
+
+  const implementation=proxyRaw&&/^0x0{24}[a-fA-F0-9]{40}$/.test(proxyRaw)
+    ?"0x"+proxyRaw.slice(-40):null;
+
+  const findings=[];
+  if(code.length<100)findings.push("Very small runtime bytecode; manual review recommended.");
+  if(implementation)findings.push("EIP-1967 implementation slot detected; proxy implementation requires separate review.");
+  if(ownerRaw&&/^0x0{24}[a-fA-F0-9]{40}$/.test(ownerRaw))findings.push("Contract exposes an owner() response; privileged functions require source-level review.");
+  if(pausedRaw==="0x"+"0".repeat(63)+"1")findings.push("paused() currently reports true.");
+
+  return {
+    ok:true,chain,address,analysis:"rpc_static_screening",
+    contractAudit:{
+      status:"automated_preliminary_screening",
+      bytecodeBytes:(code.length-2)/2,
+      totalSupply:supplyRaw?BigInt(supplyRaw).toString():null,
+      decimals:decimalsRaw?Number(BigInt(decimalsRaw)):null,
+      owner:ownerRaw&&/^0x[a-fA-F0-9]{64}$/.test(ownerRaw)?"0x"+ownerRaw.slice(-40):null,
+      paused:pausedRaw&&/^0x0{63}[01]$/.test(pausedRaw)?BigInt(pausedRaw)===1n:null,
+      proxy:{detected:!!implementation,implementation},
+      findings,
+      sourceVerification:"not_checked",
+      formalAudit:"not_performed"
+    },
+    holderAnalysis:{status:"requires_external_indexer"},
+    walletIntelligence:{status:"pending_indexer",bots:"unverified",scamLabels:"unverified",kolAttribution:"unverified",bubbleMap:"pending_transfer_graph"},
+    warnings:["RPC screening is not a source-code audit.","Selector responses do not prove the absence or presence of vulnerabilities.","No CertiK certification is implied."]
+  };
+}
