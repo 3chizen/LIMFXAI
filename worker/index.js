@@ -647,6 +647,7 @@ async function tokenForensics(chain,address,env) {
     holderAnalysis.primaryProvider="goldrush";
     holderAnalysis.primaryStatus=primaryHolders.status;
     holderAnalysis.primaryHttpStatus=primaryHolders.httpStatus||null;
+    holderAnalysis.primaryError=primaryHolders.error||null;
   }
   return {
     ok:true,chain,address,analysis:"rpc_static_screening",
