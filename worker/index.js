@@ -122,6 +122,34 @@ async function rpcCall(endpoint,method,params=[]) {
   }
   throw lastError||new Error("RPC request failed");
 }
+const RISKY_SELECTORS = {
+  "0x40c10f19": {name:"mint(address,uint256)",category:"mint_control",severity:"high",note:"Potential token minting function."},
+  "0x5c975abb": {name:"paused()",category:"pause_control",severity:"info",note:"Pause state query; not an admin control by itself."},
+  "0x8456cb59": {name:"pause()",category:"pause_control",severity:"medium",note:"Potential emergency pause control."},
+  "0x3f4ba83a": {name:"unpause()",category:"pause_control",severity:"medium",note:"Potential unpause control."},
+  "0x8da5cb5b": {name:"owner()",category:"ownership_control",severity:"info",note:"Ownership query; not proof of privileged abuse."},
+  "0xf2fde38b": {name:"transferOwnership(address)",category:"ownership_control",severity:"medium",note:"Potential ownership transfer control."},
+  "0x715018a6": {name:"renounceOwnership()",category:"ownership_control",severity:"info",note:"Potential ownership renunciation."},
+  "0x9dc29fac": {name:"burn(address,uint256)",category:"supply_control",severity:"medium",note:"Potential token burn function."},
+  "0x42966c68": {name:"burn(uint256)",category:"supply_control",severity:"medium",note:"Potential token burn function."}
+};
+function scanRiskySelectors(bytecode) {
+  if(typeof bytecode!=="string"||!/^0x(?:[0-9a-fA-F]{2})+$/.test(bytecode))return [];
+  const code=bytecode.slice(2).toLowerCase();
+  const found=new Set();
+  for(let i=0;i+10<=code.length;){
+    const opcode=parseInt(code.slice(i,i+2),16);
+    if(opcode===0x63){
+      found.add("0x"+code.slice(i+2,i+10));
+      i+=10;
+    } else {
+      i+=2;
+      if(opcode>=0x60&&opcode<=0x7f)i+=(opcode-0x5f)*2;
+    }
+  }
+  return [...found].filter(selector=>RISKY_SELECTORS[selector]).map(selector=>({...RISKY_SELECTORS[selector],selector,evidence:"push4_opcode_match",confidence:"low"}));
+}
+
 function hexToBigInt(value) {
   if(typeof value!=="string"||!/^0x[0-9a-fA-F]+$/.test(value))throw new Error("Invalid hex quantity from RPC");
   return BigInt(value);
@@ -638,6 +666,7 @@ async function tokenForensics(chain,address,env) {
   const implementation=slotAddress(proxyRaw);
 
   const findings=[];
+  const selectorFindings=scanRiskySelectors(code);
   if(code.length<100)findings.push("Very small runtime bytecode; manual review recommended.");
   if(implementation)findings.push("EIP-1967 implementation slot detected; proxy implementation requires separate review.");
   if(ownerRaw&&/^0x0{24}[a-fA-F0-9]{40}$/.test(ownerRaw))findings.push("Contract exposes an owner() response; privileged functions require source-level review.");
@@ -662,6 +691,7 @@ async function tokenForensics(chain,address,env) {
       paused:pausedRaw&&/^0x0{63}[01]$/.test(pausedRaw)?BigInt(pausedRaw)===1n:null,
       proxy:{detected:!!implementation,implementation},
       findings,
+      selectorFindings,
       sourceVerification:"not_checked",
       formalAudit:"not_performed"
     },
