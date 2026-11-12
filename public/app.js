@@ -14,6 +14,16 @@ $('send').onclick=send;$('prompt').addEventListener('keydown',e=>{if(e.key==='En
 // Wallet proof-of-ownership flow. Never requests a seed phrase/private key.
 let authSession=null, pendingChallenge=null;
 const evmIds={ethereum:1,bnb:56,base:8453,arbitrum:42161};
+let authWalletSource='injected';
+let reownCaipNetworkId=null, reownChainId=null;
+let reownUnsubAccount=null, reownUnsubNetwork=null;
+
+function syncReownVerify(){
+ const connected=!!$('authWallet').value.trim();
+ const supported=Object.values(evmIds).includes(Number(reownChainId));
+ $('verifyWallet').disabled=!(connected&&supported&&!!reownCaipNetworkId);
+}
+
 const toBase64UrlBytes = bytes => {
   let s=''; bytes.forEach(b=>s+=String.fromCharCode(b));
   return btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
@@ -22,50 +32,137 @@ $('connectWallet').onclick=async()=>{
  const chain=$('authChain').value;
  try{
   if(chain==='solana'){
+   authWalletSource='solana';
    const provider=window.solana;
-   if(!provider?.connect)throw Error('Solana wallet provider not found. Install a compatible wallet extension/browser.');
-   const out=await provider.connect();$('authWallet').value=out.publicKey.toString();
-  }else{
-   if(!window.ethereum)throw Error('EVM wallet not found. Install MetaMask or another EIP-1193 wallet.');
+   if(!provider?.connect)throw Error('Solana wallet provider not found. Install a compatible wallet/browser.');
+   const out=await provider.connect();
+   $('authWallet').value=out.publicKey.toString();
+  }else if(window.ethereum){
+   authWalletSource='injected';
    const accounts=await window.ethereum.request({method:'eth_requestAccounts'});
    if(!accounts?.length)throw Error('No wallet account returned');
    const wanted='0x'+evmIds[chain].toString(16);
    const current=await window.ethereum.request({method:'eth_chainId'});
-   if(current.toLowerCase()!==wanted)await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:wanted}]});
+   if(current.toLowerCase()!==wanted){
+    await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:wanted}]});
+   }
    $('authWallet').value=accounts[0];
+  }else{
+   const rw=window.LIMFXAIWallet;
+   if(!rw)throw Error('Reown belum siap. Refresh halaman lalu coba lagi.');
+
+   authWalletSource='reown';
+   $('verifyWallet').disabled=true;
+   $('authStatus').textContent='Pilih wallet dari jendela WalletConnect…';
+
+   if(!reownUnsubNetwork){
+    reownUnsubNetwork=rw.subscribeNetwork(state=>{
+     reownCaipNetworkId=state.caipNetworkId||rw.getCaipNetworkId();
+     reownChainId=state.chainId??rw.getChainId();
+     const selected=Object.entries(evmIds).find(([,id])=>id===Number(reownChainId));
+     if(selected){
+      $('authChain').value=selected[0];
+      $('authStatus').textContent='Network connected: '+selected[0]+'. Menunggu akun wallet…';
+     }else{
+      $('authStatus').textContent='Network belum didukung. Pilih Ethereum, BNB, Base, atau Arbitrum.';
+     }
+     syncReownVerify();
+    });
+   }
+
+   if(!reownUnsubAccount){
+    reownUnsubAccount=rw.subscribeAccount(state=>{
+     if(state.isConnected&&state.address){
+      authWalletSource='reown';
+      $('authWallet').value=state.address;
+      $('authStatus').textContent='Wallet connected. Periksa jaringan, lalu verifikasi signature.';
+     }else{
+      $('authWallet').value='';
+      $('verifyWallet').disabled=true;
+      $('authStatus').textContent='Wallet belum terhubung.';
+     }
+     syncReownVerify();
+    });
+   }
+
+   await rw.open();
+   return;
   }
-  $('verifyWallet').disabled=false;$('authStatus').textContent='Wallet connected. Next: request a one-time sign-in challenge and sign the displayed message.';
- }catch(e){$('authStatus').textContent='Connect error: '+e.message}
+
+  $('verifyWallet').disabled=false;
+  $('authStatus').textContent='Wallet connected. Next: request a one-time sign-in challenge and sign the displayed message.';
+ }catch(e){
+  $('authStatus').textContent='Connect error: '+e.message;
+ }
 };
+
 $('verifyWallet').onclick=async()=>{
  const chain=$('authChain').value,wallet=$('authWallet').value.trim();
  $('verifyWallet').disabled=true;
  try{
-  const c=await fetch('/api/auth/challenge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chain,wallet})});
-  const challenge=await c.json();if(!c.ok)throw Error(challenge.error||'Challenge request failed');
+  const c=await fetch('/api/auth/challenge',{
+   method:'POST',
+   headers:{'content-type':'application/json'},
+   body:JSON.stringify({chain,wallet})
+  });
+  const challenge=await c.json();
+  if(!c.ok)throw Error(challenge.error||'Challenge request failed');
   pendingChallenge=challenge;
+
   let signature;
   if(chain==='solana'){
    const bytes=new TextEncoder().encode(challenge.message);
    const signed=await window.solana.signMessage(bytes,'utf8');
    signature=toBase64UrlBytes(signed.signature);
+  }else if(authWalletSource==='reown'){
+   const rw=window.LIMFXAIWallet;
+   const currentId=Number(rw?.getChainId?.());
+   const selected=Object.entries(evmIds).find(([,id])=>id===currentId);
+   if(!rw||!selected||selected[0]!==chain)throw Error('Jaringan Reown tidak cocok dengan jaringan yang dipilih.');
+   const caipId=rw.getCaipNetworkId()||reownCaipNetworkId;
+   if(!caipId)throw Error('Network ID Reown belum tersedia. Hubungkan ulang wallet.');
+   signature=await rw.signMessage(challenge.message,wallet,caipId);
   }else{
-   signature=await window.ethereum.request({method:'personal_sign',params:[challenge.message,wallet]});
+   if(!window.ethereum)throw Error('Injected wallet provider tidak tersedia.');
+   signature=await window.ethereum.request({
+    method:'personal_sign',
+    params:[challenge.message,wallet]
+   });
   }
-  const v=await fetch('/api/auth/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({challengeId:challenge.challengeId,signature})});
+
+  const v=await fetch('/api/auth/verify',{
+   method:'POST',
+   headers:{'content-type':'application/json'},
+   body:JSON.stringify({challengeId:challenge.challengeId,signature})
+  });
   const raw=await v.text();
   let result;
   try{result=JSON.parse(raw)}catch{
    throw Error(`HTTP ${v.status} | URL: ${v.url} | Type: ${v.headers.get('content-type')} | Response: ${raw.slice(0,250)}`);
   }
   if(!v.ok)throw Error(result.error||`Signature verification failed (HTTP ${v.status})`);
-  authSession={token:result.sessionToken,wallet:result.wallet,chain:result.chain,expiresAt:Date.now()+result.expiresInSeconds*1000};
-  $('authStatus').textContent=`VERIFIED ✓\nWallet: ${result.wallet}\nNetwork: ${result.chain}\nSession: 1 hour\nScope: wallet authentication only\nNo trade approval or transaction was created.`;
- }catch(e){$('authStatus').textContent='Verification error: '+e.message}
- finally{$('verifyWallet').disabled=false}
+
+  authSession={
+   token:result.sessionToken,
+   wallet:result.wallet,
+   chain:result.chain,
+   expiresAt:Date.now()+result.expiresInSeconds*1000
+  };
+  $('authStatus').textContent=`VERIFIED ✓
+Wallet: ${result.wallet}
+Network: ${result.chain}
+Session: 1 hour
+Scope: wallet authentication only
+No trade approval or transaction was created.`;
+ }catch(e){
+  $('authStatus').textContent='Verification error: '+e.message;
+ }finally{
+  if(authWalletSource==='reown')syncReownVerify();
+  else $('verifyWallet').disabled=false;
+ }
 };
 
-// Read-only transaction simulation; endpoint never broadcasts a transaction.
+// // Read-only transaction simulation; endpoint never broadcasts a transaction.
 $('simType').onchange=()=>{
  const sol=$('simType').value==='solana';
  $('evmSimFields').style.display=sol?'none':'block';

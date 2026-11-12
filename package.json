@@ -9,12 +9,16 @@
     "check": "node --check worker/index.js && node --check public/app.js"
   },
   "devDependencies": {
+    "vite": "^8.3.8",
     "wrangler": "^4.0.0"
   },
   "dependencies": {
-    "viem": "^2.37.0",
+    "@reown/appkit": "^1.8.24",
+    "@reown/appkit-adapter-wagmi": "^1.8.24",
+    "bs58": "^6.0.0",
     "tweetnacl": "^1.0.3",
-    "bs58": "^6.0.0"
+    "viem": "^2.37.0",
+    "wagmi": "^2.19.5"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
