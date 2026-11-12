@@ -53,7 +53,12 @@ $('verifyWallet').onclick=async()=>{
    signature=await window.ethereum.request({method:'personal_sign',params:[challenge.message,wallet]});
   }
   const v=await fetch('/api/auth/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({challengeId:challenge.challengeId,signature})});
-  const result=await v.json();if(!v.ok)throw Error(result.error||'Signature verification failed');
+  const raw=await v.text();
+  let result;
+  try{result=JSON.parse(raw)}catch{
+   throw Error(`HTTP ${v.status} | URL: ${v.url} | Type: ${v.headers.get('content-type')} | Response: ${raw.slice(0,250)}`);
+  }
+  if(!v.ok)throw Error(result.error||`Signature verification failed (HTTP ${v.status})`);
   authSession={token:result.sessionToken,wallet:result.wallet,chain:result.chain,expiresAt:Date.now()+result.expiresInSeconds*1000};
   $('authStatus').textContent=`VERIFIED ✓\nWallet: ${result.wallet}\nNetwork: ${result.chain}\nSession: 1 hour\nScope: wallet authentication only\nNo trade approval or transaction was created.`;
  }catch(e){$('authStatus').textContent='Verification error: '+e.message}
