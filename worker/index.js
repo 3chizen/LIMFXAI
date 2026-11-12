@@ -136,20 +136,26 @@ const RISKY_SELECTORS = {
 function scanRiskySelectors(bytecode) {
   if(typeof bytecode!=="string"||!/^0x(?:[0-9a-fA-F]{2})+$/.test(bytecode))return [];
   const code=bytecode.slice(2).toLowerCase();
-  const found=new Set();
+  const found=new Map();
   for(let i=0;i+10<=code.length;){
     const opcode=parseInt(code.slice(i,i+2),16);
     if(opcode===0x63){
-      found.add("0x"+code.slice(i+2,i+10));
+      const selector="0x"+code.slice(i+2,i+10);
+      const next=code.slice(i+10,i+30);
+      const dispatcher=/^14(?:60[0-9a-f]{2}|61[0-9a-f]{4}|62[0-9a-f]{6}|63[0-9a-f]{8})57/.test(next);
+      if(RISKY_SELECTORS[selector]){
+        const evidence=dispatcher?"dispatcher_pattern_match":"push4_opcode_match";
+        const previous=found.get(selector);
+        if(!previous||dispatcher)found.set(selector,{...RISKY_SELECTORS[selector],selector,evidence,confidence:"low"});
+      }
       i+=10;
     } else {
       i+=2;
       if(opcode>=0x60&&opcode<=0x7f)i+=(opcode-0x5f)*2;
     }
   }
-  return [...found].filter(selector=>RISKY_SELECTORS[selector]).map(selector=>({...RISKY_SELECTORS[selector],selector,evidence:"push4_opcode_match",confidence:"low"}));
+  return [...found.values()];
 }
-
 function hexToBigInt(value) {
   if(typeof value!=="string"||!/^0x[0-9a-fA-F]+$/.test(value))throw new Error("Invalid hex quantity from RPC");
   return BigInt(value);
