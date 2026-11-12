@@ -437,7 +437,8 @@ export default {
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{headers:{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization"}});
   try {
-   if(url.pathname==="/api/health")return json({ok:true,service:"LIMFXAI Agent Engine",version:"0.9.0",chains:Object.keys(CHAINS),walletAuth:{evm:true,solana:true,ton:false}});
+   if(url.pathname==="/api/rpc/health"&&request.method==="GET"){const targets=[...Object.entries(RPC_CHAIN).map(([chain,cfg])=>[chain,cfg.env,cfg.chainId]),["solana","RPC_SOLANA","solana"]];const checks=await Promise.all(targets.map(async ([chain,key,expected])=>{if(!env[key])return {chain,ok:false,error:"RPC not configured"};try{const result=await rpcCall(env[key],chain==="solana"?"getHealth":"eth_chainId");const actual=chain==="solana"?result:Number(hexToBigInt(result));return {chain,ok:actual===expected,expected,actual};}catch(e){return {chain,ok:false,error:e.message};}}));return json({ok:checks.every(x=>x.ok),checks});}
+    if(url.pathname==="/api/health")return json({ok:true,service:"LIMFXAI Agent Engine",version:"0.9.0",chains:Object.keys(CHAINS),walletAuth:{evm:true,solana:true,ton:false}});
    if(url.pathname==="/api/chains")return json(CHAINS);
    if(url.pathname==="/api/auth/challenge"&&request.method==="POST")return createChallenge(request,env,await request.json());
    if(url.pathname==="/api/auth/verify"&&request.method==="POST")return verifyChallenge(env,await request.json());
