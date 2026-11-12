@@ -1,0 +1,23 @@
+{
+  "name": "limfxai-agent-engine",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check worker/index.js && node --check public/app.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "viem": "^2.37.0",
+    "tweetnacl": "^1.0.3",
+    "bs58": "^6.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261110.1": true
+  }
+}

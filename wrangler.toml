@@ -1,0 +1,17 @@
+name = "limfxai-agent-engine"
+main = "worker/index.js"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "limfxai-db"
+database_id = "d11f2903dc68fe6185bf1d995d299236"
+
+[vars]
+OPENAI_MODEL = "gpt-4.1-mini"
+XAI_MODEL = "grok-3-mini"
+# Configure SESSION_SECRET with `wrangler secret put SESSION_SECRET` for production.

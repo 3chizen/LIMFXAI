@@ -1,0 +1,15 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+
+# Local backups and archives
+*.bak
+*.pre-v1-*.bak
+*.zip
+
+# Secrets and credentials
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

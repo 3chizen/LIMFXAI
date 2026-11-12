@@ -1,0 +1,19 @@
+OPENAI_API_KEY=
+XAI_API_KEY=
+APP_ORIGIN=http://localhost:8787
+SESSION_SECRET=replace-with-a-random-secret-at-least-32-characters
+# Read-only RPC endpoints; use reputable providers and keep provider keys server-side.
+RPC_ETHEREUM=
+RPC_BNB=
+RPC_BASE=
+RPC_ARBITRUM=
+RPC_SOLANA=
+
+# DEX aggregators (server-side only)
+ZEROX_API_KEY=
+JUPITER_API_KEY=
+
+# Optional: configure an RPC endpoint to verify the inspector's selected chain.
+
+# Optional operator-maintained registry JSON; never treat this as independent certification.
+TRUSTED_SPENDER_REGISTRY={}
