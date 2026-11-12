@@ -110,7 +110,7 @@ async function rpcCall(endpoint,method,params=[]) {
         await new Promise(resolve=>setTimeout(resolve,delay));
         continue;
       }
-      if(!response.ok)throw new Error(`RPC HTTP ${response.status}`);
+      if(!response.ok){const detail=await response.text();throw new Error(`RPC HTTP ${response.status}: ${detail.slice(0,300)}`);}
       const payload=await response.json();
       if(payload.error)throw new Error(payload.error.message||"RPC call failed");
       return payload.result;
