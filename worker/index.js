@@ -598,8 +598,7 @@ async function tokenForensics(chain,address,env) {
     rpcCall(rpc,"eth_getStorageAt",[address,"0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc","latest"]).catch(()=>null)
   ]);
 
-  const implementation=proxyRaw&&/^0x0{24}[a-fA-F0-9]{40}$/.test(proxyRaw)
-    ?"0x"+proxyRaw.slice(-40):null;
+  const implementation=slotAddress(proxyRaw);
 
   const findings=[];
   if(code.length<100)findings.push("Very small runtime bytecode; manual review recommended.");
