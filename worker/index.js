@@ -445,30 +445,30 @@ async function spenderIntel(request, env, body) {
   } catch(e) { return err(`Spender intelligence failed: ${e.message}`,502); }
 }
 
-async function tokenResearch(chain, address) {
-  if (!CHAINS[chain]) throw new Error("Unsupported chain");
-  if (!address || address.length < 20 || address.length > 100) throw new Error("Token address looks invalid");
-  const url = `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`;
-  const res = await fetch(url, { headers: { "accept": "application/json" } });
-  if (!res.ok) throw new Error(`Market data provider returned ${res.status}`);
-  const body = await res.json();
-  const pairs = (body.pairs || []).filter(p => {
-    const chainId = String(p.chainId || "").toLowerCase();
-    const map = { solana:"solana", ethereum:"ethereum", bnb:"bsc", ton:"ton", base:"base", arbitrum:"arbitrum" };
-    return chainId === map[chain];
-  }).slice(0, 8);
-  if (!pairs.length) return { chain, address, found: false, note: "No matching pair found for this chain." };
-  const p = pairs.sort((a,b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0))[0];
-  const liq = Number(p.liquidity?.usd || 0), vol24 = Number(p.volume?.h24 || 0), fdv = Number(p.fdv || 0);
-  const priceChange = p.priceChange || {}, flags = [];
-  if (liq < 10000) flags.push("Liquidity below $10k: high slippage/exit risk.");
-  if (vol24 < 1000) flags.push("24h volume below $1k: low trading activity.");
-  if (fdv > 0 && liq > 0 && fdv / liq > 100) flags.push("FDV-to-liquidity ratio above 100: liquidity may be thin relative to valuation.");
-  if (Math.abs(Number(priceChange.h24 || 0)) > 50) flags.push("24h price move exceeds 50%: elevated volatility.");
-  return {chain,address,found:true,token:{name:p.baseToken?.name,symbol:p.baseToken?.symbol,priceUsd:p.priceUsd},
-    pair:p.pairAddress,dex:p.dexId,url:p.url,metrics:{liquidityUsd:liq,volume24hUsd:vol24,fdvUsd:fdv,priceChange24hPct:Number(priceChange.h24||0)},
-    screening:{flags,severity:flags.length>=3?"high":flags.length?"elevated":"no-basic-flags"},
-    disclaimer:"Screening only. This is not an audit, honeypot test, or guarantee of safety."};
+async function tokenResearch(chain,address){
+if(!CHAINS[chain])throw new Error("Unsupported chain");
+if(!address||address.length<20||address.length>100)throw new Error("Token address looks invalid");
+const flags=(l,v,f,c)=>{const a=[];if(l<1e4)a.push("Liquidity below $10k: high slippage/exit risk.");if(v<1e3)a.push("24h volume below $1k: low trading activity.");if(f>0&&l>0&&f/l>100)a.push("FDV-to-liquidity ratio above 100: liquidity may be thin relative to valuation.");if(Math.abs(c)>50)a.push("24h price move exceeds 50%: elevated volatility.");return{flags:a,severity:a.length>=3?"high":a.length?"elevated":"no-basic-flags"};};
+const disclaimer="Screening only. This is not an audit, honeypot test, or guarantee of safety.";
+const gecko=async()=>{
+const n={solana:"solana",ethereum:"eth",bnb:"bsc",ton:"ton",base:"base",arbitrum:"arbitrum"}[chain];if(!n)throw Error("Unsupported GeckoTerminal network");
+const h={accept:"application/json;version=20230203"},u=`https://api.geckoterminal.com/api/v2/networks/${n}/tokens/${encodeURIComponent(address)}`;
+const [pr,tr]=await Promise.all([fetch(u+"/pools?page=1",{headers:h}),fetch(u,{headers:h})]);
+if(!pr.ok)throw Error(`Gecko pools HTTP ${pr.status}`);if(!tr.ok)throw Error(`Gecko token HTTP ${tr.status}`);
+const [pb,tb]=await Promise.all([pr.json(),tr.json()]),t=tb.data?.attributes||{},s=address.toLowerCase();
+const rows=(pb.data||[]).map(x=>{const a=x.attributes||{},r=x.relationships||{},b=String(r.base_token?.data?.id||"").toLowerCase(),q=String(r.quote_token?.data?.id||"").toLowerCase();return{a,r,base:b.endsWith("_"+s)||b===s,match:b.endsWith("_"+s)||b===s||q.endsWith("_"+s)||q===s};}).filter(x=>x.match);
+if(!rows.length)return{chain,address,found:false,provider:"GeckoTerminal",note:"No matching GeckoTerminal pool found for this token and network."};
+rows.sort((x,y)=>Number(y.a.reserve_in_usd||0)-Number(x.a.reserve_in_usd||0));const x=rows[0],a=x.a,l=Number(a.reserve_in_usd||0),v=Number(a.volume_usd?.h24||t.volume_usd?.h24||0),f=Number(t.fdv_usd||a.fdv_usd||0),c=Number(a.price_change_percentage?.h24||0),p=Number(token.price_usd||(x.base?a.base_token_price_usd:a.quote_token_price_usd)||0);
+return{chain,address,found:true,provider:"GeckoTerminal",token:{name:t.name||"Unknown token",symbol:t.symbol||"",priceUsd:String(p)},pair:a.address,dex:x.r.dex?.data?.id||a.name||"Unknown DEX",metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};
+};
+try{
+const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`,{headers:{accept:"application/json"}});
+if(!r.ok)throw Error(`HTTP ${r.status}`);
+const b=await r.json(),m={solana:"solana",ethereum:"ethereum",bnb:"bsc",ton:"ton",base:"base",arbitrum:"arbitrum"};
+const ps=(b.pairs||[]).filter(x=>String(x.chainId||"").toLowerCase()===m[chain]).sort((x,y)=>Number(y.liquidity?.usd||0)-Number(x.liquidity?.usd||0));
+if(ps.length){const p=ps[0],l=Number(p.liquidity?.usd||0),v=Number(p.volume?.h24||0),f=Number(p.fdv||0),c=Number(p.priceChange?.h24||0);return{chain,address,found:true,provider:"DexScreener",token:{name:p.baseToken?.name,symbol:p.baseToken?.symbol,priceUsd:p.priceUsd},pair:p.pairAddress,dex:p.dexId,url:p.url,metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};}
+}catch(e){try{return await gecko();}catch(g){throw Error(`DexScreener: ${e.message}; GeckoTerminal: ${g.message}`);}}
+return await gecko();
 }
 async function askAI(env, provider, messages, research) {
   const system=`You are LIMFXAI, a cautious multi-chain research assistant. Analyze evidence, separate facts from assumptions, state uncertainty, and never claim a token is safe based only on market metrics. Never request seed phrases/private keys. Never initiate or execute transactions. A wallet login signature is not a trade approval.`;
