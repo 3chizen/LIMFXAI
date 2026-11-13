@@ -501,8 +501,21 @@ export default {
    if(url.pathname==="/api/security/inspect-evm"&&request.method==="POST")return inspectEvmTransaction(request,env,await request.json());
    if(url.pathname==="/api/security/spender-intel"&&request.method==="POST")return spenderIntel(request,env,await request.json());
    if(url.pathname==="/api/forensics/token"&&request.method==="GET"){try{return json(await tokenForensics(url.searchParams.get("chain"),url.searchParams.get("address"),env));}catch(e){return err(e.message,502);}}
-    if(url.pathname==="/api/research/token"&&request.method==="GET"){
-    try{return json(await tokenResearch(url.searchParams.get("chain"),url.searchParams.get("address")));}catch(e){return err(e.message,502);}
+   if(url.pathname==="/api/research/token"&&request.method==="GET"){
+    const chain=url.searchParams.get("chain"),address=url.searchParams.get("address");
+    if(!chain||!address)return err("chain and address are required",400);
+    const cacheKey=new Request(new URL(`/__market_cache/${encodeURIComponent(chain)}/${encodeURIComponent(address.toLowerCase())}`,url.origin));
+    const cache=typeof caches!=="undefined"?caches.default:null;
+    if(cache){try{const hit=await cache.match(cacheKey);if(hit){const status=Number(hit.headers.get("x-cached-status")||200);return new Response(hit.body,{status,headers:{...Object.fromEntries(hit.headers),"x-market-cache":"HIT"}});}}catch{}}
+    try{
+     const data=await tokenResearch(chain,address),response=json(data);
+     if(cache){try{const stored=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":"public, max-age=30","x-cached-status":"200"}});await cache.put(cacheKey,stored);}catch{}}
+     return new Response(response.body,{status:response.status,headers:{...Object.fromEntries(response.headers),"x-market-cache":"MISS"}});
+    }catch(e){
+     const response=err(e.message,502);
+     if(cache){try{const stored=new Response(JSON.stringify({error:e.message}),{headers:{"content-type":"application/json","cache-control":"public, max-age=10","x-cached-status":"502"}});await cache.put(cacheKey,stored);}catch{}}
+     return new Response(response.body,{status:response.status,headers:{...Object.fromEntries(response.headers),"x-market-cache":"MISS"}});
+    }
    }
    if(url.pathname==="/api/chat"&&request.method==="POST"){
     const b=await request.json();if(!Array.isArray(b.messages)||!b.messages.length)return err("messages is required");
