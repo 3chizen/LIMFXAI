@@ -513,6 +513,16 @@ export default {
   try {
    if(url.pathname==="/api/rpc/health"&&request.method==="GET"){const targets=[...Object.entries(RPC_CHAIN).map(([chain,cfg])=>[chain,cfg.env,cfg.chainId]),["solana","RPC_SOLANA","ok"]];const checks=await Promise.all(targets.map(async ([chain,key,expected])=>{if(!env[key])return {chain,ok:false,error:"RPC not configured"};try{const result=await rpcCall(env[key],chain==="solana"?"getHealth":"eth_chainId");const actual=chain==="solana"?result:Number(hexToBigInt(result));return {chain,ok:actual===expected,expected,actual};}catch(e){return {chain,ok:false,error:e.message};}}));return json({ok:checks.every(x=>x.ok),checks});}
     if(url.pathname==="/api/health")return json({ok:true,service:"LIMFXAI Agent Engine",version:"0.9.0",chains:Object.keys(CHAINS),walletAuth:{evm:true,solana:true,ton:false}});
+   if(url.pathname==="/api/provider/dexpaprika/status"&&request.method==="GET"){
+    const key=env.DEXPAPRIKA_API_KEY;
+    if(!key)return err("DEXPAPRIKA_API_KEY is not configured",503);
+    try{
+     const r=await fetch("https://api.dexpaprika.com/usage",{headers:{accept:"application/json",Authorization:key}});
+     if(!r.ok)return err("DexPaprika usage check failed: HTTP "+r.status,502);
+     const body=await r.json();
+     return json({ok:true,provider:"DexPaprika",plan:body.plan||"unknown",authenticated:["free","dev","pro","enterprise"].includes(body.plan)});
+    }catch(e){return err("DexPaprika usage check failed",502);}
+   }
    if(url.pathname==="/api/chains")return json(CHAINS);
    if(url.pathname==="/api/auth/challenge"&&request.method==="POST")return createChallenge(request,env,await request.json());
    if(url.pathname==="/api/auth/verify"&&request.method==="POST")return verifyChallenge(env,await request.json());
