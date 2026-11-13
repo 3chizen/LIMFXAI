@@ -445,7 +445,7 @@ async function spenderIntel(request, env, body) {
   } catch(e) { return err(`Spender intelligence failed: ${e.message}`,502); }
 }
 
-async function tokenResearch(chain,address,env){
+async function tokenResearch(chain,address,env,forceProvider){
 if(!CHAINS[chain])throw new Error("Unsupported chain");
 if(!address||address.length<20||address.length>100)throw new Error("Token address looks invalid");
 const flags=(l,v,f,c)=>{const a=[];if(l<1e4)a.push("Liquidity below $10k: high slippage/exit risk.");if(v<1e3)a.push("24h volume below $1k: low trading activity.");if(f>0&&l>0&&f/l>100)a.push("FDV-to-liquidity ratio above 100: liquidity may be thin relative to valuation.");if(Math.abs(c)>50)a.push("24h price move exceeds 50%: elevated volatility.");return{flags:a,severity:a.length>=3?"high":a.length?"elevated":"no-basic-flags"};};
@@ -482,6 +482,7 @@ try{return await dexPaprika();}
 catch(d){throw Error(`GeckoTerminal: ${geckoError}; DexPaprika: ${d.message}`);}
 };
 
+if(forceProvider==="dexpaprika")return await dexPaprika();
 try{
 const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`,{headers:{accept:"application/json"}});
 if(!r.ok)throw Error(`HTTP ${r.status}`);
@@ -535,6 +536,7 @@ export default {
    if(url.pathname==="/api/research/token"&&request.method==="GET"){
     const chain=url.searchParams.get("chain"),address=url.searchParams.get("address");
     if(!chain||!address)return err("chain and address are required",400);
+    if(url.searchParams.get("provider")==="dexpaprika"){try{return json(await tokenResearch(chain,address,env,"dexpaprika"));}catch(e){return err(e.message,502);}}
     const cache=typeof caches!=="undefined"?caches.default:null;
     const cachePath=`/__market_cache/${encodeURIComponent(chain)}/${encodeURIComponent(address.toLowerCase())}`;
     const freshKey=new Request(new URL(cachePath,url.origin));
