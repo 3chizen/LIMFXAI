@@ -461,14 +461,33 @@ if(!rows.length)return{chain,address,found:false,provider:"GeckoTerminal",note:"
 rows.sort((x,y)=>Number(y.a.reserve_in_usd||0)-Number(x.a.reserve_in_usd||0));const x=rows[0],a=x.a,l=Number(a.reserve_in_usd||0),v=Number(a.volume_usd?.h24||t.volume_usd?.h24||0),f=Number(t.fdv_usd||a.fdv_usd||0),c=Number(a.price_change_percentage?.h24||0),p=Number(t.price_usd||(x.base?a.base_token_price_usd:a.quote_token_price_usd)||0);
 return{chain,address,found:true,provider:"GeckoTerminal",token:{name:t.name||"Unknown token",symbol:t.symbol||"",priceUsd:String(p)},pair:a.address,dex:x.r.dex?.data?.id||a.name||"Unknown DEX",metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};
 };
+
+const dexPaprika=async()=>{
+const n={solana:"solana",ethereum:"ethereum",bnb:"bsc",base:"base",arbitrum:"arbitrum"}[chain];
+if(!n)throw Error("Unsupported DexPaprika network");
+const u=`https://api.dexpaprika.com/networks/${n}/tokens/${encodeURIComponent(address)}`;
+const r=await fetch(u,{headers:{accept:"application/json"}});
+if(!r.ok){const e=await r.text();throw Error(`DexPaprika HTTP ${r.status}: ${e.slice(0,240)}`);}
+const b=await r.json(),s=b.summary||{},p=Number(s.price_usd||0),l=Number(s.liquidity_usd||0),v=Number(s["24h"]?.volume_usd||0),f=Number(s.fdv||0),c=Number(s["24h"]?.last_price_usd_change||0);
+if(!b.id||!b.name&&!b.symbol||!p&&!l&&!v&&!f)throw Error("DexPaprika returned incomplete market data");
+return{chain,address,found:true,provider:"DexPaprika",token:{name:b.name||"Unknown token",symbol:b.symbol||"",priceUsd:String(p)},pair:null,dex:"DexPaprika aggregate",url:null,metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer,providerUpdatedAt:b.last_updated||null};
+};
+const fallback=async()=>{
+let geckoError;
+try{const g=await gecko();if(g.found)return g;geckoError=g.note||"No matching GeckoTerminal pool found";}
+catch(e){geckoError=e.message;}
+try{return await dexPaprika();}
+catch(d){throw Error(`GeckoTerminal: ${geckoError}; DexPaprika: ${d.message}`);}
+};
+
 try{
 const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`,{headers:{accept:"application/json"}});
 if(!r.ok)throw Error(`HTTP ${r.status}`);
 const b=await r.json(),m={solana:"solana",ethereum:"ethereum",bnb:"bsc",ton:"ton",base:"base",arbitrum:"arbitrum"};
 const ps=(b.pairs||[]).filter(x=>String(x.chainId||"").toLowerCase()===m[chain]).sort((x,y)=>Number(y.liquidity?.usd||0)-Number(x.liquidity?.usd||0));
 if(ps.length){const p=ps[0],l=Number(p.liquidity?.usd||0),v=Number(p.volume?.h24||0),f=Number(p.fdv||0),c=Number(p.priceChange?.h24||0);return{chain,address,found:true,provider:"DexScreener",token:{name:p.baseToken?.name,symbol:p.baseToken?.symbol,priceUsd:p.priceUsd},pair:p.pairAddress,dex:p.dexId,url:p.url,metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};}
-}catch(e){try{return await gecko();}catch(g){throw Error(`DexScreener: ${e.message}; GeckoTerminal: ${g.message}`);}}
-return await gecko();
+}catch(e){try{return await fallback();}catch(g){throw Error(`DexScreener: ${e.message}; ${g.message}`);}}
+return await fallback();
 }
 async function askAI(env, provider, messages, research) {
   const system=`You are LIMFXAI, a cautious multi-chain research assistant. Analyze evidence, separate facts from assumptions, state uncertainty, and never claim a token is safe based only on market metrics. Never request seed phrases/private keys. Never initiate or execute transactions. A wallet login signature is not a trade approval.`;
