@@ -487,7 +487,7 @@ try{
 const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`,{headers:{accept:"application/json"}});
 if(!r.ok)throw Error(`HTTP ${r.status}`);
 const b=await r.json(),m={solana:"solana",ethereum:"ethereum",bnb:"bsc",ton:"ton",base:"base",arbitrum:"arbitrum"};
-const ps=(b.pairs||[]).filter(x=>String(x.chainId||"").toLowerCase()===m[chain]).sort((x,y)=>Number(y.liquidity?.usd||0)-Number(x.liquidity?.usd||0));
+const ps=(b.pairs||[]).filter(x=>String(x.chainId||"").toLowerCase()===m[chain]&&String(x.baseToken?.address||"").toLowerCase()===address.toLowerCase()).sort((x,y)=>Number(y.liquidity?.usd||0)-Number(x.liquidity?.usd||0));
 if(ps.length){const p=ps[0],l=Number(p.liquidity?.usd||0),v=Number(p.volume?.h24||0),f=Number(p.fdv||0),c=Number(p.priceChange?.h24||0);return{chain,address,found:true,provider:"DexScreener",token:{name:p.baseToken?.name,symbol:p.baseToken?.symbol,priceUsd:p.priceUsd},pair:p.pairAddress,dex:p.dexId,url:p.url,metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};}
 }catch(e){try{return await fallback();}catch(g){throw Error(`DexScreener: ${e.message}; ${g.message}`);}}
 return await fallback();
