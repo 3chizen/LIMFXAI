@@ -144,7 +144,7 @@ function scanRiskySelectors(bytecode) {
       const next=code.slice(i+10,i+30);
       const dispatcher=/^14(?:60[0-9a-f]{2}|61[0-9a-f]{4}|62[0-9a-f]{6}|63[0-9a-f]{8})57/.test(next);
       if(RISKY_SELECTORS[selector]){
-        const evidence=dispatcher?"dispatcher_pattern_match":"push4_opcode_match";
+        const evidence=dispatcher?"dispatcher_heuristic_match":"push4_opcode_match";
         const previous=found.get(selector);
         if(!previous||dispatcher)found.set(selector,{...RISKY_SELECTORS[selector],selector,evidence,confidence:"low"});
       }
