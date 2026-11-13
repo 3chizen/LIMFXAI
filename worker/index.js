@@ -523,7 +523,7 @@ export default {
       try{
        const payload=JSON.stringify(data);
        await cache.put(freshKey,new Response(payload,{headers:{"content-type":"application/json","cache-control":"public, max-age=30","x-cached-status":"200"}}));
-       await cache.put(staleKey,new Response(payload,{headers:{"content-type":"application/json","cache-control":"public, max-age=300","x-cached-status":"200"}}));
+       await cache.put(staleKey,new Response(payload,{headers:{"content-type":"application/json","cache-control":"public, max-age=21600","x-cached-status":"200"}}));
       }catch{}
      }
      return new Response(response.body,{status:response.status,headers:{...Object.fromEntries(response.headers),"x-market-cache":"MISS"}});
