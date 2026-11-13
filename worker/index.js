@@ -445,7 +445,7 @@ async function spenderIntel(request, env, body) {
   } catch(e) { return err(`Spender intelligence failed: ${e.message}`,502); }
 }
 
-async function tokenResearch(chain,address,env,forceProvider){
+async function tokenResearch(chain,address,env){
 if(!CHAINS[chain])throw new Error("Unsupported chain");
 if(!address||address.length<20||address.length>100)throw new Error("Token address looks invalid");
 const flags=(l,v,f,c)=>{const a=[];if(l<1e4)a.push("Liquidity below $10k: high slippage/exit risk.");if(v<1e3)a.push("24h volume below $1k: low trading activity.");if(f>0&&l>0&&f/l>100)a.push("FDV-to-liquidity ratio above 100: liquidity may be thin relative to valuation.");if(Math.abs(c)>50)a.push("24h price move exceeds 50%: elevated volatility.");return{flags:a,severity:a.length>=3?"high":a.length?"elevated":"no-basic-flags"};};
@@ -482,7 +482,7 @@ try{return await dexPaprika();}
 catch(d){throw Error(`GeckoTerminal: ${geckoError}; DexPaprika: ${d.message}`);}
 };
 
-if(forceProvider==="dexpaprika")return await dexPaprika();
+
 try{
 const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`,{headers:{accept:"application/json"}});
 if(!r.ok)throw Error(`HTTP ${r.status}`);
@@ -514,16 +514,6 @@ export default {
   try {
    if(url.pathname==="/api/rpc/health"&&request.method==="GET"){const targets=[...Object.entries(RPC_CHAIN).map(([chain,cfg])=>[chain,cfg.env,cfg.chainId]),["solana","RPC_SOLANA","ok"]];const checks=await Promise.all(targets.map(async ([chain,key,expected])=>{if(!env[key])return {chain,ok:false,error:"RPC not configured"};try{const result=await rpcCall(env[key],chain==="solana"?"getHealth":"eth_chainId");const actual=chain==="solana"?result:Number(hexToBigInt(result));return {chain,ok:actual===expected,expected,actual};}catch(e){return {chain,ok:false,error:e.message};}}));return json({ok:checks.every(x=>x.ok),checks});}
     if(url.pathname==="/api/health")return json({ok:true,service:"LIMFXAI Agent Engine",version:"0.9.0",chains:Object.keys(CHAINS),walletAuth:{evm:true,solana:true,ton:false}});
-   if(url.pathname==="/api/provider/dexpaprika/status"&&request.method==="GET"){
-    const key=env.DEXPAPRIKA_API_KEY;
-    if(!key)return err("DEXPAPRIKA_API_KEY is not configured",503);
-    try{
-     const r=await fetch("https://api.dexpaprika.com/usage",{headers:{accept:"application/json",Authorization:key}});
-     if(!r.ok)return err("DexPaprika usage check failed: HTTP "+r.status,502);
-     const body=await r.json();
-     return json({ok:true,provider:"DexPaprika",plan:body.plan||"unknown",authenticated:["free","dev","pro","enterprise"].includes(body.plan)});
-    }catch(e){return err("DexPaprika usage check failed",502);}
-   }
    if(url.pathname==="/api/chains")return json(CHAINS);
    if(url.pathname==="/api/auth/challenge"&&request.method==="POST")return createChallenge(request,env,await request.json());
    if(url.pathname==="/api/auth/verify"&&request.method==="POST")return verifyChallenge(env,await request.json());
@@ -536,7 +526,6 @@ export default {
    if(url.pathname==="/api/research/token"&&request.method==="GET"){
     const chain=url.searchParams.get("chain"),address=url.searchParams.get("address");
     if(!chain||!address)return err("chain and address are required",400);
-    if(url.searchParams.get("provider")==="dexpaprika"){try{return json(await tokenResearch(chain,address,env,"dexpaprika"));}catch(e){return err(e.message,502);}}
     const cache=typeof caches!=="undefined"?caches.default:null;
     const cachePath=`/__market_cache/${encodeURIComponent(chain)}/${encodeURIComponent(address.toLowerCase())}`;
     const freshKey=new Request(new URL(cachePath,url.origin));
