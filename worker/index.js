@@ -445,7 +445,7 @@ async function spenderIntel(request, env, body) {
   } catch(e) { return err(`Spender intelligence failed: ${e.message}`,502); }
 }
 
-async function tokenResearch(chain,address){
+async function tokenResearch(chain,address,env){
 if(!CHAINS[chain])throw new Error("Unsupported chain");
 if(!address||address.length<20||address.length>100)throw new Error("Token address looks invalid");
 const flags=(l,v,f,c)=>{const a=[];if(l<1e4)a.push("Liquidity below $10k: high slippage/exit risk.");if(v<1e3)a.push("24h volume below $1k: low trading activity.");if(f>0&&l>0&&f/l>100)a.push("FDV-to-liquidity ratio above 100: liquidity may be thin relative to valuation.");if(Math.abs(c)>50)a.push("24h price move exceeds 50%: elevated volatility.");return{flags:a,severity:a.length>=3?"high":a.length?"elevated":"no-basic-flags"};};
@@ -466,7 +466,9 @@ const dexPaprika=async()=>{
 const n={solana:"solana",ethereum:"ethereum",bnb:"bsc",base:"base",arbitrum:"arbitrum"}[chain];
 if(!n)throw Error("Unsupported DexPaprika network");
 const u=`https://api.dexpaprika.com/networks/${n}/tokens/${encodeURIComponent(address)}`;
-const r=await fetch(u,{headers:{accept:"application/json"}});
+const apiKey=env?.DEXPAPRIKA_API_KEY;
+if(!apiKey)throw Error("DEXPAPRIKA_API_KEY is not configured");
+const r=await fetch(u,{headers:{accept:"application/json",Authorization:apiKey}});
 if(!r.ok){const e=await r.text();throw Error(`DexPaprika HTTP ${r.status}: ${e.slice(0,240)}`);}
 const b=await r.json(),s=b.summary||{},p=Number(s.price_usd||0),l=Number(s.liquidity_usd||0),v=Number(s["24h"]?.volume_usd||0),f=Number(s.fdv||0),c=Number(s["24h"]?.last_price_usd_change||0);
 if(!b.id||!b.name&&!b.symbol||!p&&!l&&!v&&!f)throw Error("DexPaprika returned incomplete market data");
@@ -537,7 +539,7 @@ export default {
      }catch{}
     }
     try{
-     const data=await tokenResearch(chain,address),response=json(data);
+     const data=await tokenResearch(chain,address,env),response=json(data);
      if(cache){
       try{
        const payload=JSON.stringify(data);
@@ -562,7 +564,7 @@ export default {
     }
    }   if(url.pathname==="/api/chat"&&request.method==="POST"){
     const b=await request.json();if(!Array.isArray(b.messages)||!b.messages.length)return err("messages is required");
-    let research=null;if(b.research?.chain&&b.research?.address){try{research=await tokenResearch(b.research.chain,b.research.address);}catch(e){research={error:e.message};}}
+    let research=null;if(b.research?.chain&&b.research?.address){try{research=await tokenResearch(b.research.chain,b.research.address,env);}catch(e){research={error:e.message};}}
     return json({reply:await askAI(env,b.provider||"openai",b.messages,research),researchAttached:!!research});
    }
    if(url.pathname==="/api/trade-intents"&&request.method==="POST"){
