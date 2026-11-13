@@ -454,11 +454,11 @@ const gecko=async()=>{
 const n={solana:"solana",ethereum:"eth",bnb:"bsc",ton:"ton",base:"base",arbitrum:"arbitrum"}[chain];if(!n)throw Error("Unsupported GeckoTerminal network");
 const h={accept:"application/json;version=20230203"},u=`https://api.geckoterminal.com/api/v2/networks/${n}/tokens/${encodeURIComponent(address)}`;
 const [pr,tr]=await Promise.all([fetch(u+"/pools?page=1",{headers:h}),fetch(u,{headers:h})]);
-if(!pr.ok)throw Error(`Gecko pools HTTP ${pr.status}`);if(!tr.ok)throw Error(`Gecko token HTTP ${tr.status}`);
+if(!pr.ok){const e=await pr.text();throw Error(`Gecko pools HTTP ${pr.status}: ${e.slice(0,240)}; Retry-After=${pr.headers.get("retry-after")||"n/a"}`);}if(!tr.ok){const e=await tr.text();throw Error(`Gecko token HTTP ${tr.status}: ${e.slice(0,240)}; Retry-After=${tr.headers.get("retry-after")||"n/a"}`);}
 const [pb,tb]=await Promise.all([pr.json(),tr.json()]),t=tb.data?.attributes||{},s=address.toLowerCase();
 const rows=(pb.data||[]).map(x=>{const a=x.attributes||{},r=x.relationships||{},b=String(r.base_token?.data?.id||"").toLowerCase(),q=String(r.quote_token?.data?.id||"").toLowerCase();return{a,r,base:b.endsWith("_"+s)||b===s,match:b.endsWith("_"+s)||b===s||q.endsWith("_"+s)||q===s};}).filter(x=>x.match);
 if(!rows.length)return{chain,address,found:false,provider:"GeckoTerminal",note:"No matching GeckoTerminal pool found for this token and network."};
-rows.sort((x,y)=>Number(y.a.reserve_in_usd||0)-Number(x.a.reserve_in_usd||0));const x=rows[0],a=x.a,l=Number(a.reserve_in_usd||0),v=Number(a.volume_usd?.h24||t.volume_usd?.h24||0),f=Number(t.fdv_usd||a.fdv_usd||0),c=Number(a.price_change_percentage?.h24||0),p=Number(token.price_usd||(x.base?a.base_token_price_usd:a.quote_token_price_usd)||0);
+rows.sort((x,y)=>Number(y.a.reserve_in_usd||0)-Number(x.a.reserve_in_usd||0));const x=rows[0],a=x.a,l=Number(a.reserve_in_usd||0),v=Number(a.volume_usd?.h24||t.volume_usd?.h24||0),f=Number(t.fdv_usd||a.fdv_usd||0),c=Number(a.price_change_percentage?.h24||0),p=Number(t.price_usd||(x.base?a.base_token_price_usd:a.quote_token_price_usd)||0);
 return{chain,address,found:true,provider:"GeckoTerminal",token:{name:t.name||"Unknown token",symbol:t.symbol||"",priceUsd:String(p)},pair:a.address,dex:x.r.dex?.data?.id||a.name||"Unknown DEX",metrics:{liquidityUsd:l,volume24hUsd:v,fdvUsd:f,priceChange24hPct:c},screening:flags(l,v,f,c),disclaimer};
 };
 try{
