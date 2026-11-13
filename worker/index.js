@@ -649,10 +649,19 @@ async function tokenForensics(chain,address,env) {
   if(chain==="solana") {
     if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address))throw new Error("Invalid Solana mint address");
     if(!env.RPC_SOLANA)throw new Error("RPC_SOLANA is not configured");
+    const solanaRpc=async(method,params=[])=>{
+      const endpoints=[env.RPC_SOLANA,env.RPC_SOLANA_BACKUP].filter(Boolean);
+      let lastError;
+      for(const endpoint of endpoints){
+        try{return await rpcCall(endpoint,method,params);}
+        catch(error){lastError=error;}
+      }
+      throw lastError||new Error("Solana RPC unavailable");
+    };
 
     const [supplyResult,largestResult]=await Promise.all([
-      rpcCall(env.RPC_SOLANA,"getTokenSupply",[address,{commitment:"confirmed"}]),
-      rpcCall(env.RPC_SOLANA,"getTokenLargestAccounts",[address,{commitment:"confirmed"}])
+      solanaRpc("getTokenSupply",[address,{commitment:"confirmed"}]),
+      solanaRpc("getTokenLargestAccounts",[address,{commitment:"confirmed"}])
     ]);
 
     const supply=supplyResult?.value;
@@ -663,7 +672,7 @@ async function tokenForensics(chain,address,env) {
 
     const holders=await Promise.all(accounts.slice(0,20).map(async item=>{
       try {
-        const info=await rpcCall(env.RPC_SOLANA,"getAccountInfo",[
+        const info=await solanaRpc("getAccountInfo",[
           item.address,{encoding:"jsonParsed",commitment:"confirmed"}
         ]);
         const parsed=info?.value?.data?.parsed?.info;
