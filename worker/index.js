@@ -650,13 +650,14 @@ async function tokenForensics(chain,address,env) {
     if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address))throw new Error("Invalid Solana mint address");
     if(!env.RPC_SOLANA)throw new Error("RPC_SOLANA is not configured");
     const solanaRpc=async(method,params=[])=>{
-      const endpoints=[env.RPC_SOLANA,env.RPC_SOLANA_BACKUP].filter(Boolean);
-      let lastError;
-      for(const endpoint of endpoints){
+      const endpoints=[["primary",env.RPC_SOLANA],["backup",env.RPC_SOLANA_BACKUP]].filter(([,url])=>Boolean(url));
+      const failures=[];
+      for(const [label,endpoint] of endpoints){
         try{return await rpcCall(endpoint,method,params);}
-        catch(error){lastError=error;}
+        catch(error){failures.push(`${label}: ${error.message}`);}
       }
-      throw lastError||new Error("Solana RPC unavailable");
+      if(!env.RPC_SOLANA_BACKUP)failures.push("backup not configured");
+      throw new Error(failures.join(" | ")||"Solana RPC unavailable");
     };
 
     const [supplyResult,largestResult]=await Promise.all([
