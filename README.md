@@ -1,71 +1,72 @@
-# LIMFXAI Agent Engine v0.4
+# LIMFXAI Agent Engine v0.9
 
-Starter Cloudflare Workers + D1 untuk fondasi riset AI multi-chain.
+Cloudflare Workers + D1 untuk riset AI multi-chain, wallet authentication, quote, simulasi, analisis keamanan, dan persetujuan trading.
 
-## Yang sudah ada
-- Chat backend dengan pilihan OpenAI atau xAI; API keys hanya di environment server.
-- Token screening berbasis data pair publik DexScreener untuk Solana, Ethereum, BNB Chain, TON, Base, dan Arbitrum.
-- Pemeriksaan heuristik dasar: liquidity, volume, FDV/liquidity, dan volatilitas 24 jam.
-- Skema proposal trading dengan status `proposed`, `approval_recorded`, `rejected`.
-- UI futuristik LIMFXAI dan tautan X @LIMFXC.
+## Fitur yang tersedia
+- AI chat dengan OpenAI dan xAI; API keys disimpan di environment server.
+- Token research, screening, dan forensics berbasis data publik.
+- Wallet authentication EVM dan Solana menggunakan challenge, verifikasi signature, dan sesi HMAC.
+- EVM dan Solana read-only transaction simulation.
+- DEX quote melalui Jupiter dan 0x.
+- EVM transaction inspection dan spender intelligence.
+- Trade proposal, approval challenge, dan verifikasi persetujuan wallet.
+- D1 rate limiting dan proteksi request pada Worker.
 
-## Batasan keamanan penting
-- Token screening bukan audit kontrak, honeypot detection, atau jaminan keamanan.
-- Tombol/status `approval_recorded` (jika dipanggil API) hanya mencatat status di database. Itu BUKAN tanda tangan wallet dan TIDAK mengirim transaksi.
-- Belum ada wallet adapter, verifikasi signature, swap router, transaksi on-chain, TON Connect, atau eksekusi live.
-- Jangan pernah memasukkan seed phrase/private key ke aplikasi.
-- Model ID default dapat berubah/bergantung akses akun. Atur `OPENAI_MODEL` dan `XAI_MODEL` ke model yang tersedia di akun API Anda.
+## Batasan keamanan dan eksekusi
+- Token screening, forensics, dan spender intelligence bukan audit kontrak atau jaminan keamanan.
+- Wallet login membuktikan kontrol wallet, bukan persetujuan transaksi.
+- Trade approval tidak mengirim atau mengeksekusi transaksi.
+- Quote dan simulasi bersifat informasional dan tidak menjamin hasil eksekusi.
+- Belum tersedia live transaction construction, broadcast, atau on-chain execution.
+- Solana simulation menggunakan transaksi unsigned dan tidak memverifikasi signature.
+- TON authentication dan quote belum diaktifkan.
+- Jangan pernah memasukkan seed phrase atau private key ke aplikasi.
 
 ## Setup lokal
-1. Install Node.js LTS.
-2. Extract ZIP, jalankan `npm install`.
-3. Salin `.dev.vars.example` menjadi `.dev.vars`, isi `OPENAI_API_KEY` dan/atau `XAI_API_KEY`.
-4. `npx wrangler d1 create limfxai-db`, lalu masukkan `database_id` ke `wrangler.toml`.
-5. Jalankan `npx wrangler d1 execute limfxai-db --local --file=./schema.sql`.
-6. Jalankan `npm run dev`.
+1. Install Node.js LTS dan jalankan `npm install`.
+2. Salin `.dev.vars.example` menjadi `.dev.vars`.
+3. Isi `SESSION_SECRET`, API keys AI, RPC endpoints, dan API keys provider yang diperlukan.
+4. Buat D1 jika belum tersedia: `npx wrangler d1 create limfxai-db`.
+5. Masukkan `database_id` ke `wrangler.toml`.
+6. Terapkan migration lokal secara berurutan:
+   `npx wrangler d1 migrations apply limfxai-db --local`
+7. Jalankan `npm run dev`.
+
+`migrations/` adalah sumber migration. `schema.sql` merupakan snapshot skema akhir.
+
+## Database yang sudah ada
+Jangan jalankan migration secara membabi buta pada database yang sebelumnya dibuat langsung dari `schema.sql`. Migration `0002` membangun ulang `trade_intents` dari skema lama dan tidak menyalin kolom approval yang sudah ada. Periksa skema dan riwayat migration terlebih dahulu.
 
 ## Deploy
-- Buat D1 production dan jalankan schema pada database tersebut.
-- Atur secrets: `npx wrangler secret put OPENAI_API_KEY` dan/atau `XAI_API_KEY`.
+- Backup dan periksa database production sebelum perubahan skema.
+- Terapkan migration production hanya setelah persetujuan eksplisit:
+  `npx wrangler d1 migrations apply limfxai-db --remote`
+- Atur Worker secrets yang diperlukan.
 - Deploy dengan `npm run deploy`.
-- Gunakan domain yang memang Anda miliki atau subdomain `workers.dev`.
+- Gunakan domain milik sendiri atau subdomain `workers.dev`.
+
+Jangan menaruh API keys, session secrets, atau RPC credentials privat di browser maupun repository.
 
 ## API
-- `GET /api/health`
-- `GET /api/chains`
-- `GET /api/research/token?chain=solana&address=...`
-- `POST /api/chat` dengan `{provider,messages,research?}`
-- `POST /api/trade-intents` untuk menyimpan proposal
-- `GET /api/trade-intents?wallet=...`
-- `POST /api/trade-intents/:id` dengan `{action:"approve"|"reject"}`
+- Health: `GET /api/health`, `GET /api/rpc/health`, `GET /api/chains`
+- Authentication: `POST /api/auth/challenge`, `POST /api/auth/verify`
+- Research: `GET /api/research/token`, `GET /api/forensics/token`
+- AI: `POST /api/chat`
+- Quote: `POST /api/quote`
+- Simulation: `POST /api/simulate/evm`, `POST /api/simulate/solana`
+- Security: `POST /api/security/inspect-evm`, `POST /api/security/spender-intel`
+- Trade: `POST /api/trade-intents`, `GET /api/trade-intents`
+- Approval: `POST /api/trade-intents/:id/approval-challenge`, `POST /api/trade-intents/:id/approve`
+- Reject proposal: `POST /api/trade-intents/:id` dengan `action: reject`
 
-## Next production milestones
-1. Wallet adapters + SIWS/EIP-4361/TonConnect signature verification.
-2. Risk engine tambahan: holder concentration, liquidity lock/burn evidence, contract simulation, honeypot checks, proxy/admin privileges.
-3. On-chain quote simulation and transaction construction.
-4. Explicit wallet signature + chain-specific transaction confirmation.
-5. Monitoring, rate limiting, audit logs, and security review.
+Endpoint yang memerlukan autentikasi menggunakan bearer session dan pemeriksaan kepemilikan wallet/network sesuai operasi.
 
-
-## v0.5 — Wallet authentication security layer
-- One-time, 5-minute challenges for EVM (Ethereum, BNB Chain, Base, Arbitrum) and Solana.
-- EVM signatures are checked with `viem` personal-sign recovery.
-- Solana detached Ed25519 signatures are verified against the base58 public key.
-- Successful proof issues a one-hour HMAC-signed session token. Configure `SESSION_SECRET` (32+ random characters).
-- Trade proposal creation, listing, and status changes now require a valid bearer session and enforce wallet/network ownership.
-- The login message explicitly says it does not authorize token transfers or trading.
-
-### Migration / setup for v0.5
-1. Install dependencies: `npm install`.
-2. Apply updated schema to both local and production D1: `npx wrangler d1 execute limfxai-db --local --file=./schema.sql` and repeat without `--local` for production.
-3. For local dev, add `SESSION_SECRET` to `.dev.vars`. For production: `npx wrangler secret put SESSION_SECRET`.
-4. Deploy after setting API keys and D1 binding.
-
-### Important scope
-- TON is intentionally disabled until official TON Connect `ton_proof` verification (domain binding, timestamp, payload, state-init and wallet public-key verification) is implemented. Do not treat a TON address string or a connect event as authentication.
-- Solana wallet signing expects the standard wallet `signMessage` method. Some wallet providers may need an adapter-specific integration.
-- Sessions are bearer tokens; production deployment should additionally use HTTPS, strict origin/CORS allowlists, rate limiting, secure client storage, logout/revocation, challenge cleanup, and security review.
-- A login proof is NOT transaction approval. On-chain transaction construction, simulation, wallet signing, and confirmation remain separate future stages.
+## Development milestones
+1. Memperluas analisis risiko token dan validasi metadata.
+2. Memperkuat verifikasi spender, ABI, proxy, dan contract behavior.
+3. Memperkuat simulasi serta validasi transaksi per chain.
+4. Membangun transaction construction dan execution dengan konfirmasi eksplisit wallet.
+5. Menambah monitoring, audit logs, session revocation, dan security review independen.
 
 
 ## v0.6 — Read-only transaction simulation

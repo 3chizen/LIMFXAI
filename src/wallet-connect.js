@@ -1,6 +1,11 @@
 import { createAppKit } from '@reown/appkit';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { mainnet, bsc, base, arbitrum } from '@reown/appkit/networks';
+import { VersionedTransaction } from '@solana/web3.js';
+
+window.LIMFXAISolana = Object.freeze({
+  deserializeTransaction: encoded => VersionedTransaction.deserialize(Uint8Array.from(atob(encoded), c => c.charCodeAt(0)))
+});
 
 const projectId = '5181eb936484e19eab8ff1179e2d123e';
 const networks = [mainnet, bsc, base, arbitrum];

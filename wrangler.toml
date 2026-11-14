@@ -20,3 +20,6 @@ RPC_BASE = "https://base-rpc.publicnode.com"
 RPC_ARBITRUM = "https://arbitrum-one-rpc.publicnode.com"
 RPC_SOLANA = "https://api.mainnet-beta.solana.com"
 # Configure SESSION_SECRET with `wrangler secret put SESSION_SECRET` for production.
+
+[triggers]
+crons = ["0 * * * *"]

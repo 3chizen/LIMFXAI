@@ -13,3 +13,9 @@ node_modules/
 !.dev.vars.example
 .env*
 !.env.example
+
+# Additional local backups and temporary patch files
+*.bak*
+.*.tmp
+.add_alchemy.js.txt
+patch-solana-execute.py
