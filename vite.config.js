@@ -3,7 +3,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   configFile: false,
   publicDir: false,
-  build: {
+  server: { proxy: { "/api": { target: "https://c291644f-limfxai-agent-engine.500ccshikazukiru.workers.dev", changeOrigin: true, secure: true } } },
+ build: {
     outDir: 'public',
     emptyOutDir: false,
     minify: true,
