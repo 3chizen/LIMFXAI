@@ -1,0 +1,29 @@
+name: LIMFXAI One-Click Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: limfxai-production-release
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/backup-d1.yml
+    secrets: inherit
+
+  migrate:
+    needs: backup
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/migrate-d1.yml
+    secrets: inherit
+
+  deploy:
+    needs: migrate
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
