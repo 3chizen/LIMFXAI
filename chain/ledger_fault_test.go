@@ -13,6 +13,7 @@ var (
 	errInjectedWrite  = errors.New("injected batch write failure")
 	errInjectedSet    = errors.New("injected batch set failure")
 	errInjectedDelete = errors.New("injected batch delete failure")
+	errInjectedClose  = errors.New("injected batch close failure")
 )
 
 type failingBatchDB struct {
@@ -107,14 +108,11 @@ func TestLedgerCommitWriteFailure(t *testing.T) {
 		t.Fatal("ledger metadata changed after failed write")
 	}
 
-	value, err := l.Get("existing")
-	if err != nil || !bytes.Equal(value, []byte("original")) {
-		t.Fatalf("existing state changed: value=%q err=%v", value, err)
+	if _, err := l.Get("existing"); !errors.Is(err, ErrLedgerClosed) {
+		t.Fatalf("Get after ambiguous WriteSync failure = %v, want ErrLedgerClosed", err)
 	}
-
-	value, err = l.Get("new")
-	if err != nil || value != nil {
-		t.Fatalf("failed transaction persisted: value=%q err=%v", value, err)
+	if _, err := l.Commit([]Transaction{{Key: "another", Value: []byte("blocked")}}); !errors.Is(err, ErrLedgerClosed) {
+		t.Fatalf("Commit after ambiguous WriteSync failure = %v, want ErrLedgerClosed", err)
 	}
 
 	if err := l.Close(); err != nil {
@@ -129,6 +127,15 @@ func TestLedgerCommitWriteFailure(t *testing.T) {
 
 	if l.Height() != beforeHeight || l.Hash() != beforeHash {
 		t.Fatal("persisted metadata changed after failed write")
+	}
+
+	value, err := l.Get("existing")
+	if err != nil || !bytes.Equal(value, []byte("original")) {
+		t.Fatalf("existing state changed after reopen: value=%q err=%v", value, err)
+	}
+	value, err = l.Get("new")
+	if err != nil || value != nil {
+		t.Fatalf("failed transaction persisted after reopen: value=%q err=%v", value, err)
 	}
 }
 
@@ -232,6 +239,7 @@ type closeTrackingDB struct {
 	failDelete bool
 	failWrite  bool
 	closeCalls *int
+	closeErr   error
 }
 
 func (db closeTrackingDB) NewBatch() dbm.Batch {
@@ -243,17 +251,19 @@ func (db closeTrackingDB) NewBatch() dbm.Batch {
 			failWrite:  db.failWrite,
 		},
 		closeCalls: db.closeCalls,
+		closeErr:   db.closeErr,
 	}
 }
 
 type closeTrackingBatch struct {
 	dbm.Batch
 	closeCalls *int
+	closeErr   error
 }
 
 func (b *closeTrackingBatch) Close() error {
 	*b.closeCalls++
-	return b.Batch.Close()
+	return errors.Join(b.closeErr, b.Batch.Close())
 }
 
 func TestLedgerCommitClosesBatchAfterFailures(t *testing.T) {
@@ -543,4 +553,62 @@ func TestLedgerCloseConcurrentCalls(t *testing.T) {
 	if closeCalls != 1 {
 		t.Fatalf("DB Close called %d times, want 1", closeCalls)
 	}
+}
+
+func TestLedgerCommitReportsBatchCloseFailures(t *testing.T) {
+	t.Run("operation and close errors are both preserved", func(t *testing.T) {
+		db, err := dbm.NewDB("limfxai", dbm.GoLevelDBBackend, t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		closeCalls := 0
+		l, err := openLedgerDB(closeTrackingDB{
+			DB:         db,
+			failSet:    true,
+			closeCalls: &closeCalls,
+			closeErr:   errInjectedClose,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer l.Close()
+
+		_, err = l.Commit([]Transaction{{Key: "new", Value: []byte("value")}})
+		if !errors.Is(err, errInjectedSet) {
+			t.Errorf("expected Set error, got %v", err)
+		}
+		if !errors.Is(err, errInjectedClose) {
+			t.Errorf("expected Close error, got %v", err)
+		}
+		if closeCalls != 1 {
+			t.Errorf("batch Close called %d times, want 1", closeCalls)
+		}
+	})
+
+	t.Run("successful write reports close error", func(t *testing.T) {
+		db, err := dbm.NewDB("limfxai", dbm.GoLevelDBBackend, t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		closeCalls := 0
+		l, err := openLedgerDB(closeTrackingDB{
+			DB:         db,
+			closeCalls: &closeCalls,
+			closeErr:   errInjectedClose,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer l.Close()
+
+		_, err = l.Commit([]Transaction{{Key: "new", Value: []byte("value")}})
+		if !errors.Is(err, errInjectedClose) {
+			t.Errorf("expected Close error, got %v", err)
+		}
+		if closeCalls != 1 {
+			t.Errorf("batch Close called %d times, want 1", closeCalls)
+		}
+	})
 }

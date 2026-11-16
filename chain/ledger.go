@@ -284,12 +284,14 @@ func (l *Ledger) Get(key string) ([]byte, error) {
 	return bytes.Clone(value), nil
 }
 
-func (l *Ledger) Commit(txs []Transaction) (Block, error) {
+func (l *Ledger) Commit(txs []Transaction) (result Block, retErr error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
 	if l.closed {
 		return Block{}, ErrLedgerClosed
 	}
+
 	copiedTxs := make([]Transaction, len(txs))
 	for i, tx := range txs {
 		copiedTxs[i] = tx
@@ -304,21 +306,17 @@ func (l *Ledger) Commit(txs []Transaction) (Block, error) {
 			return Block{}, errors.New("invalid transaction")
 		}
 	}
-
 	if l.height == ^uint64(0) {
 		return Block{}, errors.New("maximum block height reached")
 	}
 
-	b := Block{
-		Height: l.height + 1,
-		Parent: l.hash,
-		Tx:     txs,
-	}
+	b := Block{Height: l.height + 1, Parent: l.hash, Tx: txs}
 	hash, err := blockHash(b)
 	if err != nil {
 		return Block{}, err
 	}
 	b.Hash = hash
+
 	raw, err := json.Marshal(b)
 	if err != nil {
 		return Block{}, err
@@ -329,7 +327,13 @@ func (l *Ledger) Commit(txs []Transaction) (Block, error) {
 	}
 
 	batch := l.db.NewBatch()
-	defer batch.Close()
+	defer func() {
+		if closeErr := batch.Close(); closeErr != nil {
+			l.closed = true
+			retErr = errors.Join(retErr, closeErr)
+			result = Block{}
+		}
+	}()
 
 	for _, tx := range txs {
 		key := []byte("state/" + tx.Key)
@@ -352,8 +356,10 @@ func (l *Ledger) Commit(txs []Transaction) (Block, error) {
 		return Block{}, err
 	}
 	if err = batch.WriteSync(); err != nil {
+		l.closed = true
 		return Block{}, err
 	}
+
 	l.height, l.hash = b.Height, hash
 	return b, nil
 }
