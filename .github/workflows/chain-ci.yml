@@ -1,0 +1,59 @@
+name: LIMFXAI Chain CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chain-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Go Ledger Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: chain/go.mod
+          cache-dependency-path: chain/go.sum
+
+      - name: Check Go formatting
+        working-directory: chain
+        run: |
+          files="$(gofmt -l .)"
+          if [ -n "$files" ]; then
+            echo "Go files need gofmt:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Verify dependencies
+        working-directory: chain
+        run: go mod verify
+
+      - name: Run go vet
+        working-directory: chain
+        run: go vet ./...
+
+      - name: Run unit tests
+        working-directory: chain
+        run: go test -count=1 ./...
+
+      - name: Run shuffled tests
+        working-directory: chain
+        run: go test -shuffle=on -count=10 ./...
+
+      - name: Run race detector
+        working-directory: chain
+        run: go test -race -count=1 ./...
