@@ -1027,3 +1027,48 @@ html[data-theme="crimson"] .limfx-theme-menu button:hover,html[data-theme="crims
 
 /* LIMFXAI HIDDEN FORENSICS PANELS */
 .ui-feature-hidden{display:none!important}
+
+
+/* LIMFXAI SCAN — LIVING NEON ICONS */
+.scan-feature-grid>.scan-feature{--scan-icon:#72a5ff;transition:border-color .3s,box-shadow .3s,background .3s}
+.scan-feature-grid>.scan-feature:nth-child(1){--scan-icon:#20aaff}
+.scan-feature-grid>.scan-feature:nth-child(2){--scan-icon:#00e5ff}
+.scan-feature-grid>.scan-feature:nth-child(3){--scan-icon:#b45cff}
+.scan-feature-grid>.scan-feature:nth-child(4){--scan-icon:#a855ff}
+.scan-feature>span{
+  position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;
+  width:2em;height:2em;font-size:22px;color:var(--scan-icon);
+  text-shadow:0 0 7px var(--scan-icon),0 0 16px var(--scan-icon);
+  animation:scan-icon-float 3.2s ease-in-out infinite;
+}
+.scan-feature>span::before,.scan-feature>span::after{
+  content:"";position:absolute;left:50%;top:50%;z-index:-1;pointer-events:none;
+  border:1px solid var(--scan-icon);border-radius:50%;
+  box-shadow:0 0 8px var(--scan-icon),inset 0 0 7px var(--scan-icon);
+}
+.scan-feature>span::before{
+  width:1.8em;height:.85em;
+  animation:scan-ring-vertical 5s linear infinite;
+}
+.scan-feature>span::after{
+  width:1.55em;height:1.55em;opacity:.65;
+  animation:scan-ring-horizontal 7s linear infinite;
+}
+.scan-feature-grid>.scan-feature:hover{
+  border-color:var(--scan-icon);
+  box-shadow:0 0 18px color-mix(in srgb,var(--scan-icon) 35%,transparent);
+  background:color-mix(in srgb,var(--scan-icon) 9%,#151e30);
+}
+.scan-feature-grid>.scan-feature small{color:var(--scan-icon)}
+@keyframes scan-icon-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes scan-ring-vertical{
+  from{transform:translate(-50%,-50%) rotateX(68deg) rotateY(0)}
+  to{transform:translate(-50%,-50%) rotateX(68deg) rotateY(360deg)}
+}
+@keyframes scan-ring-horizontal{
+  from{transform:translate(-50%,-50%) rotateY(68deg) rotateX(0)}
+  to{transform:translate(-50%,-50%) rotateY(68deg) rotateX(360deg)}
+}
+@media(prefers-reduced-motion:reduce){
+  .scan-feature>span,.scan-feature>span::before,.scan-feature>span::after{animation:none!important}
+}
