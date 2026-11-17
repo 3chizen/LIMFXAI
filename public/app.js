@@ -136,7 +136,7 @@ async function assertAuthContext(generation,chain,wallet){
    throw Error('Reown wallet account changed or is invalid.');
   const caipMatch=typeof currentCaip==='string'?/^eip155:(0|[1-9][0-9]*)$/.exec(currentCaip):null;
   if(!Number.isSafeInteger(currentChain)||currentChain!==evmIds[chain]||!caipMatch||Number(caipMatch[1])!==currentChain||currentCaip!==reownCaipNetworkId||currentChain!==Number(reownChainId))
-   throw Error('Reown live network identity changed or does not match the subscription.');
+   throw Error('Reown network diagnostic: '+JSON.stringify({currentChain,currentCaip,subscribedChain:reownChainId,subscribedCaip:reownCaipNetworkId,expectedChain:evmIds[chain],selectedChain:chain}));
   return;
  }
 
