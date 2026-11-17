@@ -1024,3 +1024,6 @@ html[data-theme="crimson"] .limfx-theme-menu button:hover,html[data-theme="crims
 @media(prefers-reduced-motion:reduce){
  .limfx-orbital-icon,.orbital-ring-horizontal,.orbital-ring-vertical,.orbital-symbol{animation:none!important}
 }
+
+/* LIMFXAI HIDDEN FORENSICS PANELS */
+.ui-feature-hidden{display:none!important}
