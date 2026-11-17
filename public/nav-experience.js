@@ -61,3 +61,29 @@ buttons.forEach(b=>b.addEventListener("click",closeMenu));
 window.limfxaiOpenCommandPalette=open;
 window.limfxaiToggleMenu=toggleMenu;
 })();
+
+/* LIMFXAI THEME SWITCHER */
+(()=>{
+ const host=document.querySelector(".topbar-right");
+ if(!host||document.querySelector(".limfx-theme-wrap"))return;
+ const wrap=document.createElement("div");
+ wrap.className="limfx-theme-wrap";
+ wrap.innerHTML='<button class="limfx-theme-trigger" type="button" aria-label="Choose appearance" aria-expanded="false"><svg class="limfx-orbital-icon" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="limfxOrbGlow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f2d5ff"/><stop offset=".52" stop-color="#b56aff"/><stop offset="1" stop-color="#6b43ff"/></linearGradient><clipPath id="limfxSunClip"><path d="M24 10a14 14 0 1 0 0 28z"/></clipPath></defs><ellipse class="orbital-ring orbital-ring-horizontal" cx="24" cy="24" rx="22" ry="9"/><ellipse class="orbital-ring orbital-ring-vertical" cx="24" cy="24" rx="22" ry="9"/><g class="orbital-symbol"><circle class="orbital-core" cx="24" cy="24" r="15"/><circle cx="24" cy="24" r="14" fill="url(#limfxOrbGlow)" clip-path="url(#limfxSunClip)"/><path class="orbital-rays" d="M25 7v-3m8 6 2-3m4 10 3-1m-3 10 3 1m-9 8 2 3"/></g></svg></button><div class="limfx-theme-menu" role="menu"><button data-theme-choice="dark">Dark <b>✓</b></button><button data-theme-choice="white">White <b>✓</b></button><button data-theme-choice="crimson">Crimson <b>✓</b></button></div>';
+ host.insertBefore(wrap,host.querySelector(".top-divider"));
+ const trigger=wrap.querySelector("button"),menu=wrap.querySelector(".limfx-theme-menu"),items=[...menu.querySelectorAll("[data-theme-choice]")];
+ const apply=value=>{
+  value=["dark","white","crimson"].includes(value)?value:"dark";
+  if(value==="dark")document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme=value;
+  items.forEach(b=>{b.classList.toggle("active",b.dataset.themeChoice===value);b.setAttribute("aria-checked",String(b.dataset.themeChoice===value))});
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.content=value==="white"?"#f4f6fb":value==="crimson"?"#100307":"#080615";
+ };
+ let saved="dark";try{saved=localStorage.getItem("limfxai-theme")||"dark"}catch{}
+ apply(saved);
+ const close=()=>{menu.classList.remove("visible");trigger.setAttribute("aria-expanded","false")};
+ trigger.onclick=()=>{const open=!menu.classList.contains("visible");menu.classList.toggle("visible",open);trigger.setAttribute("aria-expanded",String(open))};
+ items.forEach(b=>b.onclick=()=>{apply(b.dataset.themeChoice);try{localStorage.setItem("limfxai-theme",b.dataset.themeChoice)}catch{}close()});
+ document.addEventListener("pointerdown",e=>{if(!wrap.contains(e.target))close()});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+})();
