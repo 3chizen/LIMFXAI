@@ -31,9 +31,28 @@ const appKit = createAppKit({
   }
 });
 
+const walletDebug = new URLSearchParams(location.search).has('walletdebug');
+let walletDebugPanel;
+if (walletDebug) {
+  walletDebugPanel = document.createElement('pre');
+  walletDebugPanel.id = 'limfx-wallet-debug';
+  walletDebugPanel.style.cssText = 'position:fixed;z-index:2147483647;left:8px;right:8px;bottom:8px;max-height:35vh;overflow:auto;background:#090711;color:#d8c8ff;border:1px solid #a98cff;padding:10px;border-radius:9px;font:11px monospace;white-space:pre-wrap';
+  walletDebugPanel.textContent = 'LIMFXAI WALLET DEBUG\nInitialized; waiting for AppKit events...';
+  if (document.body) document.body.append(walletDebugPanel); else document.addEventListener('DOMContentLoaded', () => document.body.append(walletDebugPanel));
+}
+const walletDebugLog = (label, detail = '') => {
+  console.info('[LIMFXAI][WALLET]', label, detail);
+  if (walletDebugPanel) {
+    walletDebugPanel.textContent += '\n' + label + (detail ? ': ' + detail : '');
+    walletDebugPanel.textContent = walletDebugPanel.textContent.split('\n').slice(-14).join('\n');
+  }
+};
 appKit.subscribeEvents(event => {
-  console.info('[LIMFXAI][REOWN_EVENT]', event);
+  const message = event?.data?.message || event?.data?.error?.message || event?.properties?.message || event?.error?.message || '';
+  walletDebugLog(event?.type || 'APPKIT_EVENT', String(message).slice(0, 180));
 });
+window.addEventListener('unhandledrejection', event => walletDebugLog('UNHANDLED_REJECTION', event.reason?.message || String(event.reason).slice(0, 180)));
+window.addEventListener('error', event => walletDebugLog('WINDOW_ERROR', event.message));
 
 window.LIMFXAIWallet = {
   open: () => appKit.open(),
