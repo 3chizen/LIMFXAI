@@ -1343,7 +1343,10 @@ export default {
   const url=new URL(request.url);
     if(url.pathname.startsWith("/api/")) {
       const origin=request.headers.get("Origin");
-      if(origin && origin!==url.origin)
+      const allowedOrigins=new Set([
+        "https://limfxc.vercel.app"
+      ]);
+      if(origin && origin!==url.origin && !allowedOrigins.has(origin))
         return err("Cross-origin API requests are not allowed",403);
     }
     if(request.method==="OPTIONS")return new Response(null,{headers:{"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"content-type,authorization"}});
