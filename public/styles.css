@@ -1072,3 +1072,51 @@ html[data-theme="crimson"] .limfx-theme-menu button:hover,html[data-theme="crims
 @media(prefers-reduced-motion:reduce){
   .scan-feature>span,.scan-feature>span::before,.scan-feature>span::after{animation:none!important}
 }
+
+
+/* LIMFXAIScan — 4D QUANTUM BLOCKCHAIN CORE */
+.scan-logo-4d{
+  position:relative;isolation:isolate;flex:0 0 58px;width:58px;height:58px;
+  display:grid;place-items:center;overflow:visible;border:0;border-radius:0;
+  background:transparent;perspective:180px;
+}
+.scan-logo-4d .scan-core{
+  position:relative;z-index:3;width:35px;height:35px;
+  display:grid;place-items:center;
+  animation:scan-core-float 3.6s ease-in-out infinite;
+  filter:drop-shadow(0 0 6px #9b6bff) drop-shadow(0 0 12px #287dff);
+}
+.scan-logo-4d .scan-core svg{width:100%;height:100%;overflow:visible}
+.scan-logo-4d .scan-orbit{
+  position:absolute;z-index:2;left:50%;top:50%;width:52px;height:22px;
+  border:1px solid #9b72ff;border-radius:50%;pointer-events:none;
+  box-shadow:0 0 7px #8b5cff, inset 0 0 5px #8b5cff;
+}
+.scan-logo-4d .scan-orbit-a{
+  animation:scan-orbit-a-spin 5s linear infinite;
+}
+.scan-logo-4d .scan-orbit-b{
+  width:43px;height:43px;border-color:#16cfff;
+  box-shadow:0 0 7px #16cfff,inset 0 0 5px #16cfff;
+  animation:scan-orbit-b-spin 7s linear infinite;
+}
+.scan-logo-4d .scan-block{
+  position:absolute;z-index:4;width:8px;height:8px;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(135deg,#e2c5ff,#8b5cff 55%,#16d9ff);
+  filter:drop-shadow(0 0 5px #8b5cff);
+}
+.scan-logo-4d .scan-block-a{left:2px;top:10px;animation:scan-block-a 3.4s ease-in-out infinite}
+.scan-logo-4d .scan-block-b{right:1px;top:8px;width:6px;height:6px;animation:scan-block-b 4.1s ease-in-out infinite}
+.scan-logo-4d .scan-block-c{right:4px;bottom:5px;width:9px;height:9px;animation:scan-block-c 3.8s ease-in-out infinite}
+.scan-logo-4d .scan-block-d{left:5px;bottom:3px;width:5px;height:5px;animation:scan-block-d 4.5s ease-in-out infinite}
+@keyframes scan-core-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes scan-orbit-a-spin{from{transform:translate(-50%,-50%) rotateX(68deg) rotateY(0)}to{transform:translate(-50%,-50%) rotateX(68deg) rotateY(360deg)}}
+@keyframes scan-orbit-b-spin{from{transform:translate(-50%,-50%) rotateY(68deg) rotateX(0)}to{transform:translate(-50%,-50%) rotateY(68deg) rotateX(360deg)}}
+@keyframes scan-block-a{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(-3px,-5px) rotate(35deg)}}
+@keyframes scan-block-b{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(4px,-4px) rotate(-45deg)}}
+@keyframes scan-block-c{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(3px,4px) rotate(55deg)}}
+@keyframes scan-block-d{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(-4px,3px) rotate(-35deg)}}
+@media(prefers-reduced-motion:reduce){
+  .scan-logo-4d *{animation:none!important}
+}
