@@ -780,3 +780,161 @@ body:before{background:linear-gradient(#08061135,#08061145),url("/nephis-bg.png"
 .sidebar-bottom{
   display:none!important;
 }
+
+/* LIMFXAI CURVED GLASS SIDEBAR */
+.sidebar{
+ width:280px!important;padding:22px 16px!important;
+ border:1px solid #a879ff55!important;border-left:0!important;
+ border-radius:0 30px 30px 0!important;
+ background:linear-gradient(155deg,#21113bef,#100c25f2 48%,#090d20f5)!important;
+ backdrop-filter:blur(26px) saturate(145%);
+ -webkit-backdrop-filter:blur(26px) saturate(145%);
+ box-shadow:18px 0 65px #000b,inset -1px 0 #d7b4ff22,0 0 34px #873cff24!important;
+ scrollbar-width:thin;scrollbar-color:#8050bd66 transparent;
+}
+.sidebar::before{
+ content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+ background:radial-gradient(ellipse at 0 0,#a34dff25,transparent 48%),radial-gradient(ellipse at 100% 75%,#426dff18,transparent 42%);
+}
+.sidebar>*{position:relative;z-index:1}
+.profile{
+ position:relative;margin:2px 0 16px;padding:16px 10px 17px!important;
+ border:1px solid #b98aff38;border-radius:23px;
+ background:linear-gradient(135deg,#ffffff0c,#9b5cff12 55%,#ffffff05);
+ box-shadow:inset 0 1px #ffffff14,0 12px 30px #0003;
+ transition:border-color .25s,box-shadow .25s,background .25s;
+}
+.profile:hover{border-color:#c49aff88;box-shadow:inset 0 1px #ffffff22,0 0 25px #9b5cff25}
+.profile img{box-shadow:0 0 0 5px #a34dff13,0 0 28px #a34dff66!important}
+.profile-name{letter-spacing:.35px}
+.side-brand{margin:0 0 8px;padding:15px 8px 13px!important;border-top:1px solid #b98aff25!important}
+.side-brand b{text-shadow:0 0 22px #a34dff55}
+.module-nav{gap:9px!important;margin-top:10px!important}
+.module-nav button{
+ position:relative;isolation:isolate;overflow:hidden;min-height:49px;
+ padding:12px 13px!important;border:1px solid #b98aff12!important;
+ border-radius:15px!important;
+ background:linear-gradient(110deg,#ffffff06,#a34dff04)!important;
+ box-shadow:inset 0 1px #ffffff08;
+ transition:background .24s,border-color .24s,box-shadow .24s,color .24s!important;
+}
+.module-nav button::before{
+ content:"";position:absolute;inset:0;z-index:-1;opacity:0;
+ background:linear-gradient(100deg,#8b35ed35,#4d58d52b 75%,#a34dff12);
+ transition:opacity .24s;
+}
+.module-nav button:hover{
+ border-color:#b98aff66!important;
+ background:linear-gradient(100deg,#8b35ed20,#4d58d51a)!important;
+ box-shadow:0 5px 22px #7c39df20,inset 0 1px #ffffff15;
+}
+.module-nav button:hover::before{opacity:1}
+.module-nav button.active{
+ border-color:#bd8cffbb!important;
+ background:linear-gradient(105deg,#8435e95c,#5147c34a 72%,#a34dff1c)!important;
+ box-shadow:0 0 24px #873cff35,inset 0 1px #ffffff20!important;
+}
+.module-nav button b{letter-spacing:.2px}
+@media(max-width:760px){
+ .sidebar{width:min(88vw,340px)!important;padding:18px 14px!important;border-radius:0 26px 26px 0!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .profile,.module-nav button,.module-nav button::before{transition:none!important}
+}
+
+/* LIMFXAI — FIXED NEPHIS WALLPAPER */
+body:before{
+ position:fixed!important;
+ inset:0!important;
+ background-position:center center!important;
+ background-size:cover!important;
+ background-repeat:no-repeat!important;
+ background-attachment:fixed!important;
+ animation:none!important;
+ transform:none!important;
+ filter:brightness(1.35) saturate(1.2)!important;
+}
+body:after{
+ animation:none!important;
+}
+.app-shell:after{
+ animation:none!important;
+}
+.app-shell:before{
+ animation:none!important;
+}
+
+/* LIMFXAI — ROOT FIXED NEPHIS WALLPAPER */
+html{
+  min-height:100%;
+  background:#070511 url("/nephis-bg.png") center center / cover fixed no-repeat!important;
+}
+body{
+  background:transparent!important;
+}
+body:before{
+  content:none!important;
+  display:none!important;
+}
+
+/* LIMFXAI — ANDROID STABLE FIXED WALLPAPER */
+html{
+  background:#070511!important;
+  background-image:none!important;
+  background-attachment:scroll!important;
+}
+body{
+  position:relative!important;
+  isolation:isolate!important;
+  background:transparent!important;
+}
+body:before{
+  content:""!important;
+  display:block!important;
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  background:
+    linear-gradient(#08061135,#08061145),
+    url("/nephis-bg.png") center center / cover no-repeat!important;
+  background-attachment:scroll!important;
+  animation:none!important;
+  transform:none!important;
+}
+.app-shell{
+  position:relative!important;
+  z-index:1!important;
+}
+
+/* LIMFXAI — SINGLE VIEWPORT WALLPAPER */
+html{
+  min-height:100%;
+  background:#070511!important;
+}
+body{
+  min-height:100%;
+  background:transparent!important;
+  isolation:auto!important;
+}
+body:before{
+  content:""!important;
+  display:block!important;
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100vh!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  background:linear-gradient(#08061135,#08061145),url("/nephis-bg.png") center center/cover no-repeat!important;
+  animation:none!important;
+  transform:none!important;
+}
+.app-shell:before,
+.app-shell:after{
+  content:none!important;
+  display:none!important;
+  animation:none!important;
+}
