@@ -13,7 +13,7 @@ const networks = [mainnet, bsc, base, arbitrum];
 const metadata = {
   name: 'LIMFXAI',
   description: 'LIMFXAI Web3 Intelligence Dashboard',
-  url: 'https://limfxai-agent-engine.500ccshikazukiru.workers.dev',
+  url: 'https://limfxc.vercel.app',
   icons: []
 };
 

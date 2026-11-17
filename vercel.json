@@ -4,5 +4,7 @@
       "source": "/api/:path*",
       "destination": "https://c291644f-limfxai-agent-engine.500ccshikazukiru.workers.dev/api/:path*"
     }
-  ]
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "public"
 }
