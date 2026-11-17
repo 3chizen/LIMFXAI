@@ -31,6 +31,10 @@ const appKit = createAppKit({
   }
 });
 
+appKit.subscribeEvents(event => {
+  console.info('[LIMFXAI][REOWN_EVENT]', event);
+});
+
 window.LIMFXAIWallet = {
   open: () => appKit.open(),
   disconnect: () => appKit.disconnect(),
