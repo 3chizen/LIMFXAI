@@ -9,6 +9,7 @@
     "check": "node --check worker/index.js && node --check public/app.js"
   },
   "devDependencies": {
+    "solc": "^0.8.38",
     "vite": "^8.3.8",
     "wrangler": "^4.0.0"
   },
