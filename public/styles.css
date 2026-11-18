@@ -1144,3 +1144,22 @@ html[data-theme="crimson"] .limfx-theme-menu button:hover,html[data-theme="crims
 .module-nav button[data-page="domain"] .nav-icon{color:#70dfff;filter:drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 8px #9b5cff77)}
 .module-nav button[data-page="copilot"] .nav-icon{animation-delay:-.7s}
 .module-nav button[data-page="domain"] .nav-icon{animation-delay:-2s}
+
+
+/* LIMFXAI — NEPHIS WALLPAPER ALL THEMES */
+html[data-theme="white"] body,
+html[data-theme="crimson"] body{
+  background:transparent!important;
+}
+html[data-theme="white"] body:before{
+  background:
+    linear-gradient(rgba(244,246,251,.38),rgba(244,246,251,.52)),
+    url("/nephis-bg.png") center center/cover no-repeat!important;
+  filter:brightness(1.08) saturate(.9)!important;
+}
+html[data-theme="crimson"] body:before{
+  background:
+    linear-gradient(rgba(48,5,17,.43),rgba(16,3,7,.58)),
+    url("/nephis-bg.png") center center/cover no-repeat!important;
+  filter:brightness(.95) saturate(1.2)!important;
+}
