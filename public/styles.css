@@ -547,8 +547,10 @@ body:before{background:linear-gradient(#08061135,#08061145),url("/nephis-bg.png"
 }
 .module-nav button:hover{transform:none!important}
 .module-nav button[data-page="market"] .nav-icon,
+.module-nav button[data-page="copilot"] .nav-icon,
 .module-nav button[data-page="wallet"] .nav-icon,
 .module-nav button[data-page="security"] .nav-icon,
+.module-nav button[data-page="domain"] .nav-icon,
 .module-nav button[data-page="trade"] .nav-icon{
   animation:limfx-icon-float 4s ease-in-out infinite;
   transform-origin:center;
@@ -1120,3 +1122,25 @@ html[data-theme="crimson"] .limfx-theme-menu button:hover,html[data-theme="crims
 @media(prefers-reduced-motion:reduce){
   .scan-logo-4d *{animation:none!important}
 }
+
+
+/* LIMFXAI NETWORK — 4D CRYSTAL ICON COLOR */
+.module-nav button[data-page="network"] .nav-icon{
+  color:#a879ff;
+  filter:drop-shadow(0 0 4px #9b5cff) drop-shadow(0 0 8px #00cfff88);
+}
+.module-nav button[data-page="network"].active .nav-icon{
+  color:#d9c4ff;
+  filter:drop-shadow(0 0 5px #a855ff) drop-shadow(0 0 10px #00e5ff);
+}
+
+
+/* LIMFXAI — SIX 4D SIDEBAR ICONS */
+.module-nav button[data-page="market"] .nav-icon{color:#b879ff;filter:drop-shadow(0 0 4px #9b5cff) drop-shadow(0 0 7px #00e5ff66)}
+.module-nav button[data-page="copilot"] .nav-icon{color:#d5aaff;filter:drop-shadow(0 0 5px #a855ff) drop-shadow(0 0 8px #00e5ff88)}
+.module-nav button[data-page="wallet"] .nav-icon{color:#a98aff;filter:drop-shadow(0 0 4px #9b5cff) drop-shadow(0 0 8px #00cfff77)}
+.module-nav button[data-page="trade"] .nav-icon{color:#76dfff;filter:drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 8px #9b5cff77)}
+.module-nav button[data-page="security"] .nav-icon{color:#b99aff;filter:drop-shadow(0 0 4px #9b5cff) drop-shadow(0 0 8px #00e5ff77)}
+.module-nav button[data-page="domain"] .nav-icon{color:#70dfff;filter:drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 8px #9b5cff77)}
+.module-nav button[data-page="copilot"] .nav-icon{animation-delay:-.7s}
+.module-nav button[data-page="domain"] .nav-icon{animation-delay:-2s}
