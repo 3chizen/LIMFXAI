@@ -1,161 +1,397 @@
-# LIMFXAI Agent Engine v0.9
+# LIMFXAI
 
-Cloudflare Workers + D1 untuk riset AI multi-chain, wallet authentication, quote, simulasi, analisis keamanan, dan persetujuan trading.
+LIMFXAI is a multi-chain AI application and blockchain infrastructure project. The repository contains the LIMFXAI Agent Engine and the development implementation of the LIMFXAI Layer 1 blockchain.
 
-## Fitur yang tersedia
-- AI chat dengan OpenAI dan xAI; API keys disimpan di environment server.
-- Token research, screening, dan forensics berbasis data publik.
-- Wallet authentication EVM dan Solana menggunakan challenge, verifikasi signature, dan sesi HMAC.
-- EVM dan Solana read-only transaction simulation.
-- DEX quote melalui Jupiter dan 0x.
-- EVM transaction inspection dan spender intelligence.
-- Trade proposal, approval challenge, dan verifikasi persetujuan wallet.
-- D1 rate limiting dan proteksi request pada Worker.
+## Project Overview
 
-## Batasan keamanan dan eksekusi
-- Token screening, forensics, dan spender intelligence bukan audit kontrak atau jaminan keamanan.
-- Wallet login membuktikan kontrol wallet, bukan persetujuan transaksi.
-- Trade approval tidak mengirim atau mengeksekusi transaksi.
-- Quote dan simulasi bersifat informasional dan tidak menjamin hasil eksekusi.
-- Belum tersedia live transaction construction, broadcast, atau on-chain execution.
-- Solana simulation menggunakan transaksi unsigned dan tidak memverifikasi signature.
-- TON authentication dan quote belum diaktifkan.
-- Jangan pernah memasukkan seed phrase atau private key ke aplikasi.
+LIMFXAI consists of two major development areas:
 
-## Setup lokal
-1. Install Node.js LTS dan jalankan `npm install`.
-2. Salin `.dev.vars.example` menjadi `.dev.vars`.
-3. Isi `SESSION_SECRET`, API keys AI, RPC endpoints, dan API keys provider yang diperlukan.
-4. Buat D1 jika belum tersedia: `npx wrangler d1 create limfxai-db`.
-5. Masukkan `database_id` ke `wrangler.toml`.
-6. Terapkan migration lokal secara berurutan:
-   `npx wrangler d1 migrations apply limfxai-db --local`
-7. Jalankan `npm run dev`.
+- **LIMFXAI Agent Engine** — an AI-powered backend built with Cloudflare Workers and D1.
+- **LIMFXAI Layer 1** — an independent blockchain implementation based on the Cosmos ecosystem, with EVM compatibility and IBC integration.
 
-`migrations/` adalah sumber migration. `schema.sql` merupakan snapshot skema akhir.
+The Agent Engine provides application services. The Layer 1 project focuses on blockchain runtime, modules, state management, and network infrastructure.
 
-## Database yang sudah ada
-Jangan jalankan migration secara membabi buta pada database yang sebelumnya dibuat langsung dari `schema.sql`. Migration `0002` membangun ulang `trade_intents` dari skema lama dan tidak menyalin kolom approval yang sudah ada. Periksa skema dan riwayat migration terlebih dahulu.
+---
 
-## Deploy
-- Backup dan periksa database production sebelum perubahan skema.
-- Terapkan migration production hanya setelah persetujuan eksplisit:
-  `npx wrangler d1 migrations apply limfxai-db --remote`
-- Atur Worker secrets yang diperlukan.
-- Deploy dengan `npm run deploy`.
-- Gunakan domain milik sendiri atau subdomain `workers.dev`.
+## 1. LIMFXAI Agent Engine
 
-Jangan menaruh API keys, session secrets, atau RPC credentials privat di browser maupun repository.
+The Agent Engine provides AI assistance, multi-chain research, wallet authentication, transaction inspection, and trading-related workflows.
 
-## API
-- Health: `GET /api/health`, `GET /api/rpc/health`, `GET /api/chains`
-- Authentication: `POST /api/auth/challenge`, `POST /api/auth/verify`
-- Research: `GET /api/research/token`, `GET /api/forensics/token`
-- AI: `POST /api/chat`
-- Quote: `POST /api/quote`
-- Simulation: `POST /api/simulate/evm`, `POST /api/simulate/solana`
-- Security: `POST /api/security/inspect-evm`, `POST /api/security/spender-intel`
-- Trade: `POST /api/trade-intents`, `GET /api/trade-intents`
-- Approval: `POST /api/trade-intents/:id/approval-challenge`, `POST /api/trade-intents/:id/approve`
-- Reject proposal: `POST /api/trade-intents/:id` dengan `action: reject`
+### Features
 
-Endpoint yang memerlukan autentikasi menggunakan bearer session dan pemeriksaan kepemilikan wallet/network sesuai operasi.
+- AI chat integration with OpenAI and xAI.
+- Multi-chain token research, screening, and forensic data retrieval.
+- EVM and Solana wallet authentication.
+- Challenge-based signature verification and HMAC-backed sessions.
+- Read-only EVM and Solana transaction simulation.
+- DEX quote retrieval through Jupiter and 0x.
+- EVM transaction authorization inspection.
+- EVM spender intelligence and contract bytecode checks.
+- Trade proposals, approval challenges, and wallet approval verification.
+- Cloudflare D1 rate limiting and request protection.
 
-## Development milestones
-1. Memperluas analisis risiko token dan validasi metadata.
-2. Memperkuat verifikasi spender, ABI, proxy, dan contract behavior.
-3. Memperkuat simulasi serta validasi transaksi per chain.
-4. Membangun transaction construction dan execution dengan konfirmasi eksplisit wallet.
-5. Menambah monitoring, audit logs, session revocation, dan security review independen.
+### Network coverage
 
+- Ethereum
+- BNB Chain
+- Base
+- Arbitrum
+- Solana
+- TON integration is not enabled for the documented authentication and quote workflows.
 
-## v0.6 — Read-only transaction simulation
-- EVM simulation for Ethereum, BNB Chain, Base, and Arbitrum: `eth_chainId`, `eth_call`, `eth_estimateGas`, `eth_gasPrice`, and latest block metadata.
-- Returns gas estimate, a 20% gas-limit buffer suggestion, estimated network fee, and call revert reason where available.
-- Solana simulation uses `simulateTransaction` with `sigVerify:false` and `replaceRecentBlockhash:true` for unsigned simulation only.
-- Requires a valid one-hour LIMFXAI wallet-auth session; session wallet and selected chain are enforced.
-- RPC URLs remain server-side environment variables: `RPC_ETHEREUM`, `RPC_BNB`, `RPC_BASE`, `RPC_ARBITRUM`, `RPC_SOLANA`.
+Provider availability and supported networks may change.
 
-### v0.6 configuration
-Add RPC endpoint URLs to `.dev.vars` locally. In production, configure them as Worker secrets or protected vars:
-`wrangler secret put RPC_ETHEREUM` (repeat for each endpoint). Never put provider API keys or RPC URLs containing secrets in browser JavaScript or public source.
+### Security and execution boundaries
 
-### Simulation limits
-- EVM `eth_call` and gas estimates are read-only point-in-time checks; they do not guarantee mining/inclusion or future execution.
-- EVM calldata must be constructed by a trusted client/protocol integration; this release does not fetch DEX quotes, build router calldata, decode token approvals, or calculate price impact.
-- Fee estimate uses `eth_gasPrice` and a 20% gas limit buffer. EIP-1559 max-fee/tip strategy and L2-specific fees (e.g. Arbitrum/Base L1 data fees) are not fully modeled; treat displayed fee as partial estimate.
-- Solana simulation does not validate signatures (`sigVerify:false`) and is not approval. Do not send signed transactions here.
-- TON simulation is not implemented.
-- No route in this release calls `eth_sendRawTransaction`, `sendTransaction`, or Solana `sendTransaction`; no broadcast/execution.
+- Wallet authentication proves wallet control, not transaction authorization.
+- Trade approval workflows do not independently broadcast or execute transactions.
+- Quotes and simulations are informational and do not guarantee execution.
+- Token screening and spender intelligence are not independent security audits.
+- Solana simulation does not verify transaction signatures.
+- The documented Agent Engine workflows do not provide live transaction signing or broadcast.
+- Never enter seed phrases or private keys into the application.
 
-## v0.7 — DEX quote & route preview
+---
 
-This release adds an authenticated, quote-only endpoint: `POST /api/quote`.
+## 2. LIMFXAI Layer 1
 
-### Provider coverage
+LIMFXAI Layer 1 is under active development using the Cosmos blockchain ecosystem.
 
-- **Solana:** Jupiter Swap API v2 `GET https://api.jup.ag/swap/v2/order`.
-- **Ethereum, BNB Chain, Base, Arbitrum:** 0x Swap API v2 AllowanceHolder price endpoint (`/swap/allowance-holder/price`).
-- **TON:** quote adapter is not enabled yet; do not treat TON as tradable in this build.
+### Technology
 
-Set the following server-side secrets (never expose them in browser code):
+- Cosmos SDK
+- Cosmos EVM
+- IBC-Go
+- Go
+
+Exact dependency versions are maintained in `chain/go.mod`.
+
+### Blockchain components
+
+Current implementation work includes:
+
+- Account and bank keepers.
+- Staking and distribution keepers.
+- Mint, governance, and slashing keepers.
+- Consensus parameters keeper.
+- Authz and feegrant integration.
+- Cosmos EVM keeper and module integration.
+- ERC-20 and fee market integration.
+- IBC core and transfer keepers.
+- Upgrade keeper integration.
+- EVM network configuration and denomination validation.
+- Static precompile configuration.
+- Genesis validation and module account checks.
+- Persistent ledger implementation and integrity tests.
+
+### Native asset
+
+The intended native asset is **LFX**.
+
+The current denomination configuration uses:
+
+- Base denomination: `ulfx`
+- Display denomination: `lfx`
+
+These values are development configuration. Final chain parameters must be established and validated through genesis configuration before a network launch.
+
+### Runtime integration status
+
+The Layer 1 implementation has several keeper and module components, but the complete application bootstrap is not finished.
+
+Remaining integration work includes:
+
+- Runtime application construction.
+- Dependency injection and module provider registration.
+- Store key registration and mounting.
+- Complete module lifecycle configuration.
+- IBC and EVM module registration through the runtime builder.
+- Genesis initialization and validation.
+- Node executable and validator configuration.
+- End-to-end application and network testing.
+
+The current codebase must not be treated as a production-ready or publicly launched blockchain network.
+
+---
+
+## 3. Architecture
+
+The project separates application services from blockchain infrastructure.
+
+| Area | Responsibility |
+|---|---|
+| Agent Engine | AI, research, wallet sessions, quotes, and security inspection |
+| Cloudflare Worker | HTTP API and server-side application logic |
+| Cloudflare D1 | Application database and persistent workflow data |
+| Cosmos SDK | Layer 1 application framework |
+| Cosmos EVM | EVM execution and Ethereum-compatible integration |
+| IBC-Go | Inter-blockchain communication |
+| Chain ledger | Persistent block and transaction state component |
+
+The Agent Engine and Layer 1 have separate deployment and runtime requirements.
+
+---
+
+## 4. Agent Engine Setup
+
+### Requirements
+
+- Node.js LTS
+- npm
+- Cloudflare Wrangler
+- Cloudflare account for remote deployment
+
+### Installation
+
+```bash
+npm install
+```
+
+Create the local environment file:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+Configure the required server-side values:
+
+- `SESSION_SECRET`
+- AI provider API keys
+- RPC endpoint URLs
+- Provider API keys where required
+
+Create the D1 database if it does not already exist:
+
+```bash
+npx wrangler d1 create limfxai-db
+```
+
+Set the database ID in `wrangler.toml`.
+
+Apply local migrations in order:
+
+```bash
+npx wrangler d1 migrations apply limfxai-db --local
+```
+
+Start local development:
+
+```bash
+npm run dev
+```
+
+The `migrations/` directory is the migration source of truth. `schema.sql` is a snapshot of the final schema.
+
+### Existing database warning
+
+Do not blindly apply migrations to a database previously created directly from `schema.sql`.
+
+Inspect the existing schema and migration history first. Migration `0002` rebuilds `trade_intents` from an older schema and may not preserve approval columns already present in an existing database.
+
+---
+
+## 5. Agent Engine Configuration
+
+### RPC endpoints
+
+Configure RPC endpoints on the server side:
+
+- `RPC_ETHEREUM`
+- `RPC_BNB`
+- `RPC_BASE`
+- `RPC_ARBITRUM`
+- `RPC_SOLANA`
+
+### DEX provider credentials
 
 ```dotenv
 ZEROX_API_KEY=your-0x-api-key
 JUPITER_API_KEY=your-jupiter-api-key
 ```
 
-Jupiter may allow low-rate keyless prototyping; configure a production API key for reliable usage. 0x requires an API key. The API keys belong in `.dev.vars` for local development or Cloudflare Worker secrets for deployment.
+Use `.dev.vars` for local development and Cloudflare Worker secrets for production.
 
-### Quote request
+Never expose provider credentials or private RPC URLs in browser code or public repositories.
 
-Requires a valid `Authorization: Bearer <sessionToken>` and the requested chain must match the wallet-authenticated session.
+---
 
-```json
-{
-  "chain": "base",
-  "inputToken": "0x...",
-  "outputToken": "0x...",
-  "amount": "1000000"
-}
+## 6. API Reference
+
+### Health and network information
+
+- `GET /api/health`
+- `GET /api/rpc/health`
+- `GET /api/chains`
+
+### Authentication
+
+- `POST /api/auth/challenge`
+- `POST /api/auth/verify`
+
+### Research
+
+- `GET /api/research/token`
+- `GET /api/forensics/token`
+
+### AI
+
+- `POST /api/chat`
+
+### DEX quote
+
+- `POST /api/quote`
+
+### Transaction simulation
+
+- `POST /api/simulate/evm`
+- `POST /api/simulate/solana`
+
+### Security
+
+- `POST /api/security/inspect-evm`
+- `POST /api/security/spender-intel`
+
+### Trade proposals
+
+- `POST /api/trade-intents`
+- `GET /api/trade-intents`
+- `POST /api/trade-intents/:id/approval-challenge`
+- `POST /api/trade-intents/:id/approve`
+- `POST /api/trade-intents/:id` with `action: reject`
+
+Authenticated endpoints require a valid bearer session. Wallet ownership and network matching are enforced according to the operation.
+
+---
+
+## 7. Transaction and Simulation Details
+
+### EVM simulation
+
+The EVM simulation workflow uses read-only RPC methods, including:
+
+- `eth_chainId`
+- `eth_call`
+- `eth_estimateGas`
+- `eth_gasPrice`
+
+Gas and network fee estimates are informational. They do not guarantee transaction inclusion or execution.
+
+### Solana simulation
+
+Solana simulation uses unsigned transaction simulation with signature verification disabled.
+
+It does not authorize or execute a transaction.
+
+### DEX quote providers
+
+- **Solana:** Jupiter Swap API v2.
+- **Ethereum, BNB Chain, Base, and Arbitrum:** 0x Swap API v2 AllowanceHolder price endpoint.
+
+Quotes are indicative and time-sensitive. Provider output must not be treated as an executable transaction.
+
+### Spender intelligence
+
+The EVM spender inspection workflow checks contract bytecode and EIP-1967 proxy implementation storage where applicable.
+
+An optional operator-maintained registry can compare spender bytecode hashes using `TRUSTED_SPENDER_REGISTRY`.
+
+A registry match indicates a bytecode match against an operator-maintained reference. It is not an audit, certification, or guarantee of safety.
+
+---
+
+## 8. Layer 1 Development
+
+The blockchain implementation is maintained in the `chain/` directory.
+
+```bash
+cd chain
 ```
 
-`amount` is an integer string in the input token's smallest unit (base units), not a human decimal amount. The response is curated and does not return an executable transaction or calldata. Quotes are indicative and marked with a short 20-second freshness window. Token symbols/decimals and USD price normalization are not yet resolved by this endpoint, so the current UI deliberately displays raw provider output.
+Run the Go test suite:
 
-### Safety boundary
-
-- Quote endpoint never signs, broadcasts, approves, or executes a swap.
-- No token allowance is requested. Any allowance target returned by the provider is informational only.
-- The endpoint does not yet build a final transaction, decode/validate approval calldata, or automatically feed router calldata into v0.6 simulation.
-- Before production trading, add token metadata/decimal verification, firm quote refresh, spender allowlisting, exact-amount approval flow, calldata inspection, fresh simulation, wallet signature review, and chain-specific execution tests.
-- Aggregator availability and supported chains can change; verify provider documentation and API responses before deployment.
-
-### Provider references
-
-- Jupiter Swap API v2: https://developers.jup.ag/docs/swap
-- 0x API overview and authentication: https://docs.0x.org/api-reference/api-overview
-- 0x Swap API quickstart: https://docs.0x.org/docs/introduction/quickstart/swap-tokens-with-0x-swap-api
-
-
-## v0.8 — Transaction authorization inspection
-
-Adds authenticated `POST /api/security/inspect-evm` for EVM sessions. The basic selector decoder recognizes ERC-20 `approve`, `increaseAllowance`, `transfer`, `transferFrom`, and ERC-721-style `setApprovalForAll`; it flags unlimited allowance and broad operator approval. It also reports unknown selectors as unknown rather than guessing. When the matching chain RPC is configured, it checks `eth_chainId` before returning the inspection.
-
-### Request
-
-```json
-{ "to": "0x...", "data": "0x095ea7b3...", "value": "0" }
+```bash
+go test -ldflags=-checklinkname=0 -count=1 ./...
 ```
 
-`value` is an unsigned integer string in wei. This endpoint is informational only: it does not submit an approval, construct a wallet prompt, sign, or broadcast. A recognized selector is not a trusted spender allowlist or a contract audit. Proxy logic, delegatecall, malicious bytecode, token tax, and non-standard ABI behavior are not comprehensively analyzed. Never sign solely based on a low-risk label.
+The linker flag is used for the current development environment and dependency compatibility.
 
-### Production gaps
+The chain must complete runtime application integration, store mounting, module registration, genesis initialization, and node bootstrap before it can be considered a runnable Layer 1 network.
 
-- No verified token metadata/decimals or USD normalization.
-- No curated spender allowlist, verified source/ABI lookup, proxy implementation analysis, or full simulation of approval state changes.
-- No EIP-712 permit decoding, Solana instruction decoder, TON transaction inspection, wallet signing, or transaction broadcast.
-- Add strict CORS/origin allowlists, rate limits, audit logs, session revocation, RPC provider controls, and independent security review before production.
+---
 
-## v0.9 — Protocol & Spender Intelligence
+## 9. Deployment
 
-`POST /api/security/spender-intel` requires an EVM wallet session. It verifies RPC chain ID, checks token and spender bytecode, reads the EIP-1967 implementation slot, and optionally compares spender bytecode SHA-256 against an operator-maintained registry. Configure `TRUSTED_SPENDER_REGISTRY` as JSON keyed by `chain:lowercase-address`. A registry match only means bytecode matches the operator's pin; it is not an audit or certification. Only EIP-1967 proxy storage is checked. No signature, approval, or broadcast is performed.
+Before deploying the Agent Engine:
+
+1. Back up and inspect the production D1 database.
+2. Review pending migrations.
+3. Apply production migrations only after explicit approval.
+4. Configure required Worker secrets.
+5. Verify RPC endpoints and provider credentials.
+6. Deploy the Worker.
+
+Apply remote migrations:
+
+```bash
+npx wrangler d1 migrations apply limfxai-db --remote
+```
+
+Deploy:
+
+```bash
+npm run deploy
+```
+
+Use an owned domain or a Cloudflare `workers.dev` subdomain.
+
+Never commit API keys, session secrets, or private RPC credentials.
+
+---
+
+## 10. Development Priorities
+
+Current development priorities include:
+
+- Completing Cosmos SDK runtime and application bootstrap.
+- Integrating EVM and IBC modules into the runtime application.
+- Completing store key registration and mounting.
+- Finalizing module lifecycle configuration.
+- Completing genesis initialization and validation.
+- Building the node executable and validator configuration.
+- Improving token metadata and decimal validation.
+- Expanding contract and spender analysis.
+- Improving transaction simulation and chain-specific validation.
+- Developing explicit wallet-authorized transaction construction.
+- Adding monitoring, audit logs, and session revocation.
+- Conducting independent security reviews before production use.
+
+---
+
+## 11. Project Status
+
+| Component | Status |
+|---|---|
+| Agent Engine | Active development |
+| Cloudflare Worker and D1 | Implemented application workflows |
+| EVM wallet authentication | Implemented |
+| Solana wallet authentication | Implemented |
+| EVM and Solana simulation | Read-only |
+| DEX quote integration | Quote-only |
+| EVM security inspection | Implemented development workflows |
+| Cosmos SDK keeper components | Under development |
+| Cosmos EVM integration | Under development |
+| ERC-20 and fee market integration | Under development |
+| IBC integration | Under development |
+| Runtime application bootstrap | In progress |
+| Genesis and node initialization | Not complete |
+| Production Layer 1 network | Not launched |
+
+---
+
+## Security Notice
+
+LIMFXAI is an actively developed software and blockchain infrastructure project.
+
+Features, provider integrations, and network configurations may change. No security inspection, simulation, quote, or registry match guarantees that an asset, contract, transaction, or network is safe.
+
+Do not use development deployments as production infrastructure without appropriate testing, operational safeguards, and independent security review.
