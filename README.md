@@ -1,13 +1,5 @@
-# LIMFXAI
-
-<p align="center">
-  <img src="assets/limfxai-blockchain-cube.gif" width="220" alt="LIMFXAI Animated Blockchain Cube">
-</p>
-
-
-LIMFXAI is a multi-chain AI application and blockchain infrastructure project. The repository contains the LIMFXAI Agent Engine and the development implementation of the LIMFXAI Layer 1 blockchain.
-
-## Project Overview
+-//\\-
+## P - Overview
 
 LIMFXAI consists of two major development areas:
 
